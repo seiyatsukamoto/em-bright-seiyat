@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "em-bright"
+version = "0.1.0"
+description = ""
+authors = [
+    "Deep Chatterjee <deep.chatterjee@ligo.org>",
+    "Shaon Ghosh <shaon.ghosh@ligo.org>"]
+packages = [
+    { include = "ligo" },
+]
+license = "MIT"
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+numpy = "1.16"
+scikit-learn = "0.22.2.post1"
+astropy = "<=4.0"
+pandas = "<=1.0"
+lalsuite = "^7.0"
+h5py = "<=3.4"
+
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+Sphinx = "^4.1.2"
+toml = "^0.10.2"
+nbsphinx = "^0.8.7"
+
+
+[tool.poetry.scripts]
+em_bright_categorize = 'em_bright.categorize:main'
+em_bright_dag_writer = 'em_bright.dag_writer:main'
+em_bright_extract = 'em_bright.utils:extract'
+em_bright_join = 'em_bright.utils:join'
+em_bright_train = 'em_bright.utils:train'
+
+
+[tool.pytest.ini_options]
+addopts = "-rsx --tb=short"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
