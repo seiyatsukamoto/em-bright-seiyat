@@ -6,6 +6,8 @@ stages:
 
 sdist_whl:
   stage: dist
+  before_script:
+    - pip install poetry
   script:
     - poetry build
 
