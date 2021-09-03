@@ -1,0 +1,14 @@
+MANIFEST
+*.pyc
+*~
+*swp
+build
+dist
+*.egg-info
+.eggs/
+.DS_Store
+.pytest_cache
+doc/.ipynb_checkpoints
+doc/_build
+doc/_static
+doc/_templates
