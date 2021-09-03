@@ -1,0 +1,23 @@
+image: python:3.7-buster
+
+stages:
+  - dist
+  - test
+
+sdist_whl:
+  stage: dist
+  script:
+    - poetry build
+
+install:
+  stage: test
+  script:
+    - poetry install
+
+test:
+  stage: test
+  dependencies:
+    - install
+  script:
+    - poetry run pytest
+
