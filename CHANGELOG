@@ -1,0 +1,7 @@
+# Changelog
+
+## Unreleased 0.1.0
+
+- Port over em-bright functionaility from p-astro SHA 0b9c8247
+- Switch to poetry for dependency management and packaging
+- Demote data directory from a package stage; use pathlib
