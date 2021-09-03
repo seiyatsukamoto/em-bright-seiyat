@@ -1,27 +1,29 @@
 image: python:3.8-buster
 
 stages:
-  - dist
   - test
+  - install
 
-sdist_whl:
-  stage: dist
+build_test:
+  stage: test 
   before_script:
     - pip install poetry
   script:
-    - poetry build
-
-install:
-  stage: test
-  dependencies:
-    - sdist_whl
-  script:
     - poetry install
-
-test:
-  stage: test
-  dependencies:
-    - install
-  script:
     - poetry run pytest
+    - poetry build
+    - mv dist/* .
+  artifacts:
+    paths:
+      - '*tar.gz'
+      - '*whl'
 
+tar_whl:
+  stage: install
+  dependencies:
+    - build_test
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - pip install ./*tar.gz
+    - pip install ./*whl
