@@ -50,12 +50,6 @@ def main():
                         help="Name of the config file")
     parser.add_argument("-e", "--executables-dir", required=True,
                         help="Directory containing executables")
-    parser.add_argument("-f", "--data-history", required=True,
-                        help="Bayes factor and weights data from previous runs")
-    parser.add_argument("-t", "--trigger-db", required=True,
-                        help="Trigger database required for p_astro")
-    parser.add_argument("-r", "--ranking-data", required=True,
-                        help="ranking_data.xml.gz required by p_astro")
     args = parser.parse_args()
 
     # The binaries that needs to be copied for condor jobs to run
@@ -66,9 +60,6 @@ def main():
     config = ConfigParser()
     config.read(args.config)
     abs_config_file = os.path.abspath(args.config)
-    abs_trigger_db = os.path.abspath(args.trigger_db)
-    abs_ranking_data = os.path.abspath(args.ranking_data)
-    abs_data_history = os.path.abspath(args.data_history)
 
     # Get path for the work directory
     if not os.path.exists(args.work_dir):
@@ -92,12 +83,6 @@ def main():
                                           'em_bright_categorize')
     em_bright_train_sub = config.get('sub_names',
                                      'em_bright_train')
-    p_astro_histogram_by_bin_sub = \
-        config.get('sub_names',
-                   'p_astro_histogram_by_bin')
-    p_astro_compute_means_sub = \
-        config.get('sub_names',
-                   'p_astro_compute_means')
     # Get input and output file names prefixes
     em_bright_extract_prefix = config.get('output_filenames',
                                           'em_bright_extract_prefix')
@@ -115,14 +100,6 @@ def main():
                                         'em_bright_train_prefix')
     em_bright_train_suffix = config.get('output_filenames',
                                         'em_bright_train_suffix')
-    p_astro_histogram_by_bin_prefix = config.get('output_filenames',
-                                                 'p_astro_histogram_by_bin_prefix')
-    p_astro_histogram_by_bin_suffix = config.get('output_filenames',
-                                                 'p_astro_histogram_by_bin_suffix')
-    p_astro_compute_means_prefix = config.get('output_filenames',
-                                              'p_astro_compute_means_prefix')
-    p_astro_compute_means_suffix = config.get('output_filenames',
-                                              'p_astro_compute_means_suffix')
 
     # Get node names
     em_bright_extract_nodename = config.get('node_names',
@@ -133,12 +110,6 @@ def main():
                                                'em_bright_categorize')
     em_bright_train_nodename = config.get('node_names',
                                           'em_bright_train')
-    p_astro_histogram_by_bin_nodename = \
-        config.get('node_names',
-                   'p_astro_histogram_by_bin')
-    p_astro_compute_means_nodename = \
-        config.get('node_names',
-                   'p_astro_compute_means')
     # Get executable names
     em_bright_extract_executable = config.get('executables',
                                               'em_bright_extract')
@@ -148,12 +119,6 @@ def main():
                                                  'em_bright_categorize')
     em_bright_train_executable = config.get('executables',
                                             'em_bright_train')
-    p_astro_histogram_by_bin_executable = \
-        config.get('executables',
-                   'p_astro_histogram_by_bin')
-    p_astro_compute_means_executable = \
-        config.get('executables',
-                   'p_astro_compute_means')
     # Get the EoS to be used for EM bright categorization
     em_bright_eos = config.get('em_bright', 'eos_name')
     # Define the executable arguments association
@@ -175,19 +140,6 @@ def main():
         em_bright_train_executable: (
             " --input $(macroinput) --config $(macroconfig) --output $(macrooutput) --param-sweep-plot",
             em_bright_train_sub
-        ),
-        p_astro_histogram_by_bin_executable: (
-            " --input $(macroinput) --output $(macrooutput) --config $(macroconfig)",
-            p_astro_histogram_by_bin_sub
-        ),
-        p_astro_compute_means_executable: (
-            " --input $(macroinput)"
-            " --ranking-data $(macrorankingdata)"
-            " --config $(macroconfig)"
-            " --output $(macrooutput)"
-            " --trigger-db $(macrotriggerdb)"
-            " --data-history $(macrodatahistory)",
-            p_astro_compute_means_sub
         )
     }
     # write all sub files
@@ -279,46 +231,6 @@ def main():
     line += 'VARS {} macroconfig="{}"\n\n'.format(em_bright_train_nodename,
                                                 abs_config_file)
 
-    # BINNING
-    binning_input = join_output
-    binning_output = p_astro_histogram_by_bin_prefix + '-' + startT + '-' + \
-        duration + p_astro_histogram_by_bin_suffix
-    binning_output = os.path.join(abs_work_dir, binning_output)
-
-    line += 'JOB {} {}\n'.format(p_astro_histogram_by_bin_nodename,
-                                 p_astro_histogram_by_bin_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(p_astro_histogram_by_bin_nodename,
-                                               binning_input)
-    line += 'VARS {} macrooutput="{}"\n'.format(p_astro_histogram_by_bin_nodename,
-                                                  binning_output)
-    line += 'VARS {} macroconfig="{}"\n\n'.format(p_astro_histogram_by_bin_nodename,
-                                                abs_config_file)
-
-    parentchildline += 'PARENT {} CHILD {}\n'.format(em_bright_join_nodename,
-                                                     p_astro_histogram_by_bin_nodename)
-
-    # compute the means
-    means_input = binning_output
-    means_output = p_astro_compute_means_prefix + '-' + startT + '-' + duration + \
-        p_astro_compute_means_suffix
-    means_output = os.path.join(abs_work_dir, means_output)
-
-    line += 'JOB {} {}\n'.format(p_astro_compute_means_nodename,
-                                 p_astro_compute_means_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(p_astro_compute_means_nodename,
-                                               means_input)
-    line += 'VARS {} macrooutput="{}"\n'.format(p_astro_compute_means_nodename,
-                                                means_output)
-    line += 'VARS {} macroconfig="{}"\n'.format(p_astro_compute_means_nodename,
-                                                abs_config_file)
-    line += 'VARS {} macrorankingdata="{}"\n'.format(p_astro_compute_means_nodename,
-                                                     abs_ranking_data)
-    line += 'VARS {} macrodatahistory="{}"\n'.format(p_astro_compute_means_nodename,
-                                                     abs_data_history)
-    line += 'VARS {} macrotriggerdb="{}"\n\n'.format(p_astro_compute_means_nodename,
-                                                     abs_trigger_db)
-    parentchildline += 'PARENT {} CHILD {}\n'.format(p_astro_histogram_by_bin_nodename,
-                                                     p_astro_compute_means_nodename)
     daglines += line
     daglines += parentchildline
 

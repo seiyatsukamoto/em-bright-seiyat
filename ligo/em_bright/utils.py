@@ -353,7 +353,7 @@ def run_k_fold_split(features, targets, n_splits=10, random_state=0,
     res_predict_proba[:] = np.nan
     res_predict[:] = np.nan
 
-    sss = KFold(n_splits=n_splits, random_state=random_state)
+    sss = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     sss.get_n_splits(features, targets)
     for train_index, test_index in sss.split(features, targets):
         X_train, X_test, y_train = \
