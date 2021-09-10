@@ -1,17 +1,25 @@
-image: python:3.8-buster
+.test_script: &test_script
+  before_script:
+  - pip install poetry
+  script:
+  - poetry install
+  - poetry run pytest
+  - poetry build
 
 stages:
   - test
   - install
 
-build_test:
-  stage: test 
-  before_script:
-    - pip install poetry
-  script:
-    - poetry install
-    - poetry run pytest
-    - poetry build
+build_test_38:
+  image: python:3.8-buster
+  stage: test
+  <<: *test_script
+
+build_test_39:
+  image: python:3.9-buster
+  stage: test
+  <<: *test_script
+  after_script:
     - mv dist/* .
   artifacts:
     paths:
@@ -19,9 +27,11 @@ build_test:
       - '*whl'
 
 tar_whl:
+  image: python:3.9
   stage: install
   dependencies:
-    - build_test
+    - build_test_38
+    - build_test_39
   before_script:
     - pip install --upgrade pip
   script:
