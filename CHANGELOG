@@ -5,3 +5,6 @@
 - Port over em-bright functionaility from p-astro SHA 0b9c8247
 - Switch to poetry for dependency management and packaging
 - Demote data directory from a package stage; use pathlib
+- Trim DAG writing script to only em-bright training components
+- Remove scikit-learn pin; use latest release
+- Retrain and replace classifiers using scikit-learn==0.24.2
