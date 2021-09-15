@@ -1,3 +1,10 @@
+.dash_dash_help: &dash_dash_help
+  - em_bright_categorize --help
+  - em_bright_extract --help
+  - em_bright_join --help
+  - em_bright_train --help
+  - em_bright_dag_writer --help
+
 .test_script: &test_script
   before_script:
   - pip install poetry
@@ -5,6 +12,7 @@
   - poetry install
   - poetry run pytest
   - poetry build
+  - *dash_dash_help
 
 stages:
   - test
@@ -35,6 +43,7 @@ tar_whl:
   image: python:3.9
   stage: install
   dependencies:
+    - build_test_37
     - build_test_38
     - build_test_39
   before_script:
