@@ -1,9 +1,9 @@
 .dash_dash_help: &dash_dash_help
   - em_bright_categorize --help
+  - em_bright_dag_writer --help
   - em_bright_extract --help
   - em_bright_join --help
   - em_bright_train --help
-  - em_bright_dag_writer --help
 
 .test_script: &test_script
   before_script:
@@ -12,7 +12,6 @@
   - poetry install
   - poetry run pytest
   - poetry build
-  - *dash_dash_help
 
 stages:
   - test
@@ -51,3 +50,4 @@ tar_whl:
   script:
     - pip install ./*tar.gz
     - pip install ./*whl
+    - *dash_dash_help
