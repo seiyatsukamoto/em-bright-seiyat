@@ -10,6 +10,11 @@ stages:
   - test
   - install
 
+build_test_37:
+  image: python:3.7-buster
+  stage: test
+  <<: *test_script
+
 build_test_38:
   image: python:3.8-buster
   stage: test
