@@ -10,7 +10,6 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy import cosmology, units as u
 
-from .computeDiskMass import compute_isco
 from .computeDiskMass import computeDiskMass
 
 
@@ -68,10 +67,12 @@ def source_classification(m1, m2, chi1, chi2, snr,
     (1.0, 1.0)
     """
     if not ns_classifier:
-        with open(Path(__file__).parents[0] / 'data/knn_ns_classifier.pkl', 'rb') as f:
+        with open(Path(__file__).parents[0] / 'data/knn_ns_classifier.pkl',
+                  'rb') as f:
             ns_classifier = pickle.load(f)
     if not emb_classifier:
-        with open(Path(__file__).parents[0] / 'data/knn_em_classifier.pkl', 'rb') as f:
+        with open(Path(__file__).parents[0] / 'data/knn_em_classifier.pkl',
+                  'rb') as f:
             emb_classifier = pickle.load(f)
 
     features = [[m1, m2, chi1, chi2, snr]]
@@ -147,9 +148,9 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
     Examples
     --------
     >>> from ligo import em_bright
-    >>> em_bright.source_classification_pe('posterior_V1H1L1_1240327333.3365-0.hdf5')
+    >>> em_bright.source_classification_pe('posterior_samples.hdf5')
     (1.0, 0.9616727412238634)
-    >>> em_bright.source_classification_pe('posterior_samples_online.dat', hdf5=False)
+    >>> em_bright.source_classification_pe('posterior_samples.dat', hdf5=False)  # noqa:E501
     (0.0, 0.0)
     """
     if hdf5:

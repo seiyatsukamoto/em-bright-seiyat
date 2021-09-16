@@ -17,10 +17,13 @@ def test_source_classification_pe():
     with NamedTemporaryFile() as f:
         filename = f.name
         with h5py.File(f, 'w') as tmp_h5:
-            data = np.array([(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0), (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
-                            dtype=[('mc', '<f8'), ('q', '<f8'),
-                                   ('a1', '<f8'), ('a2', '<f8'), ('tilt1', '<f8'),
-                                   ('tilt2', '<f8'), ('dist', '<f8')])
+            data = np.array(
+                [(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0),
+                 (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
+                dtype=[('mc', '<f8'), ('q', '<f8'),
+                       ('a1', '<f8'), ('a2', '<f8'), ('tilt1', '<f8'),
+                       ('tilt2', '<f8'), ('dist', '<f8')]
+            )
             tmp_h5.create_dataset(
                 'lalinference/lalinference_mcmc/posterior_samples',
                 data=data
@@ -55,8 +58,8 @@ def test_mock_classifier():
     # Define mock objects
     mock_clf_ns = Mock()
     mock_clf_emb = Mock()
-    mock_clf_ns.predict_proba = Mock(return_value = np.array([[1., 1.]]))
-    mock_clf_emb.predict_proba = Mock(return_value = np.array([[1., 1.]]))
+    mock_clf_ns.predict_proba = Mock(return_value=np.array([[1., 1.]]))
+    mock_clf_emb.predict_proba = Mock(return_value=np.array([[1., 1.]]))
 
     ns, em = em_bright.source_classification(m1, m2, chi1, chi2, snr,
                                              ns_classifier=mock_clf_ns,

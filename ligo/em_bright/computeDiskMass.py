@@ -120,8 +120,8 @@ def computeCompactness(M_ns, eosname='2H', R_ns=None,
         C_ns = s(M_ns)
         m2_b = s_b(M_ns)
     try:
-        C_ns[M_ns > max_mass] = 0.5 ## BH compactness set to 0.5
-        m2_b[M_ns > max_mass] = 0.0 ## BH baryon mass set to 0.0
+        C_ns[M_ns > max_mass] = 0.5  # BH compactness set to 0.5
+        m2_b[M_ns > max_mass] = 0.0  # BH baryon mass set to 0.0
     except TypeError:  # if C_ns is not an array
         if M_ns > max_mass:
             C_ns = 0.5
@@ -186,7 +186,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     >>> chi2 = np.zeros(3)
     >>> computeDiskMass(m1, m2, chi1, chi2)
     array([0.12833991, 0.05054819, 0.])
-    >>> computeDiskMass(m1, m2, chi1, chi2, eosname='AP4')                                                                                                                                        
+    >>> computeDiskMass(m1, m2, chi1, chi2, eosname='AP4')
     array([0.00851525, 0., 0.])
     >>> max_mass = 3.0  # in m_sun
     >>> r_ns = 15000.  # in meters
@@ -203,7 +203,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
         _ = iter(m1)
         assert m1.size == m2.size == chi1.size == chi2.size, \
             "masses and spins must have the same dimensions"
-        ## Making sure that the supplied m1 >= m2 ##
+        # Making sure that the supplied m1 >= m2 ##
         largerMass1 = m1 >= m2
         largerMass2 = m2 > m1
         m_primary = np.zeros_like(m1)
@@ -275,6 +275,6 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
         combinedTerms = 0 if combinedTerms < 0 else combinedTerms
     M_rem = (combinedTerms**delta)*m2_b
     if type(BNS) == np.ndarray:
-        M_rem[BBH] = 0.0 # BBH is always EM-Dark
-        M_rem[BNS] = 1.0 # Ad hoc value, assuming BNS is always EM-Bright
+        M_rem[BBH] = 0.0  # BBH is always EM-Dark
+        M_rem[BNS] = 1.0  # Ad hoc value, assuming BNS is always EM-Bright
     return M_rem

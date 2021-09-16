@@ -39,7 +39,7 @@ def join():
     parser = ArgumentParser(
         "Join extracted GstLAL sim-coinc parameters as astropy table")
     parser.add_argument("-i", "--input", required=True,
-                        help="Directory storing extracted sim-coinc flat files")
+                        help="Directory storing extracted sim-coinc files")
     parser.add_argument("-c", "--config", required=True,
                         help="Name of the config file")
     parser.add_argument("-o", "--output", required=True,
@@ -85,93 +85,98 @@ def extract():
     parser = ArgumentParser(
         "Get sim-coinc maps for LIGO GstLAL injection sqlite database")
     parser.add_argument("-i", "--input", required=True,
-        help="sqlite database")
+                        help="sqlite database")
     parser.add_argument("-o", "--output", required=True,
-        help="Output file, stored as numpy array")
+                        help="Output file, stored as numpy array")
     args = parser.parse_args()
 
     cur = sqlite3.connect(args.input).cursor()
-    cur.execute("""
-	    CREATE TEMPORARY TABLE
-	    sim_coinc_map_helper
-	    AS
-	    SELECT a.event_id as sid,
-	    coinc_event.coinc_event_id as cid,
-	    coinc_event.likelihood as lr
-	    FROM coinc_event_map as a
-	    JOIN coinc_event_map AS b ON (b.coinc_event_id == a.coinc_event_id)
-	    JOIN coinc_event ON (coinc_event.coinc_event_id == b.event_id)
-	    WHERE a.table_name == 'sim_inspiral'
-	    AND b.table_name == 'coinc_event'
-	    AND NOT EXISTS (
-	        SELECT * FROM time_slide WHERE
-	        time_slide.time_slide_id == coinc_event.time_slide_id
-	        AND time_slide.offset != 0
-	    )"""
+    cur.execute(
+        """
+        CREATE TEMPORARY TABLE
+        sim_coinc_map_helper
+        AS
+        SELECT a.event_id as sid,
+        coinc_event.coinc_event_id as cid,
+        coinc_event.likelihood as lr
+        FROM coinc_event_map as a
+        JOIN coinc_event_map AS b ON (b.coinc_event_id == a.coinc_event_id)
+        JOIN coinc_event ON (coinc_event.coinc_event_id == b.event_id)
+        WHERE a.table_name == 'sim_inspiral'
+        AND b.table_name == 'coinc_event'
+        AND NOT EXISTS (
+            SELECT * FROM time_slide WHERE
+            time_slide.time_slide_id == coinc_event.time_slide_id
+            AND time_slide.offset != 0
+        )"""
     )
 
-    cur.execute("""
-	    CREATE INDEX IF NOT EXISTS
-	    sim_coinc_map_helper_index ON sim_coinc_map_helper (sid, cid)
-	    """
+    cur.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        sim_coinc_map_helper_index ON sim_coinc_map_helper (sid, cid)
+        """
     )
 
-    cur.execute("""
-	    CREATE TEMPORARY TABLE
-		    sim_coinc_map
-	    AS
-		    SELECT
-			    sim_inspiral.simulation_id AS simulation_id,
-			    (
-				    SELECT cid FROM
-	                            sim_coinc_map_helper
-				    WHERE sid = simulation_id
-				    ORDER BY lr DESC
-				    LIMIT 1
-			    ) AS coinc_event_id
-		    FROM sim_inspiral
-		    WHERE coinc_event_id IS NOT NULL
+    cur.execute(
+        """
+        CREATE TEMPORARY TABLE
+            sim_coinc_map
+        AS
+            SELECT
+                sim_inspiral.simulation_id AS simulation_id,
+                (
+                    SELECT cid FROM
+                                sim_coinc_map_helper
+                    WHERE sid = simulation_id
+                    ORDER BY lr DESC
+                    LIMIT 1
+                ) AS coinc_event_id
+            FROM sim_inspiral
+            WHERE coinc_event_id IS NOT NULL
         """
     )
 
     cur.execute("""DROP INDEX sim_coinc_map_helper_index""")
 
     query = """
-	SELECT 
-	sim_inspiral.mass1,
-	sim_inspiral.mass2,
-	sim_inspiral.spin1z,
-	sim_inspiral.spin2z,
+    SELECT
+    sim_inspiral.mass1,
+    sim_inspiral.mass2,
+    sim_inspiral.spin1z,
+    sim_inspiral.spin2z,
         sim_inspiral.alpha3,
-	sngl_inspiral.mass1,
-	sngl_inspiral.mass2,
-	sngl_inspiral.spin1z,
-	sngl_inspiral.spin2z,
-	sngl_inspiral.Gamma1,
-	coinc_inspiral.combined_far,
-	coinc_inspiral.snr,
-	coinc_inspiral.end_time
-	FROM
-	sim_coinc_map 
-	JOIN
-	sim_inspiral 
-	ON 
-	sim_coinc_map.simulation_id==sim_inspiral.simulation_id 
-	JOIN
-	coinc_event_map 
-	ON
-	sim_coinc_map.coinc_event_id == coinc_event_map.coinc_event_id 
-	JOIN
-	coinc_inspiral 
-	ON
-	sim_coinc_map.coinc_event_id == coinc_inspiral.coinc_event_id 
-	JOIN
-	sngl_inspiral 
-	ON
-	(coinc_event_map.table_name == 'sngl_inspiral' AND coinc_event_map.event_id == sngl_inspiral.event_id) 
-	WHERE
-	sngl_inspiral.ifo=='H1';    
-	"""
+    sngl_inspiral.mass1,
+    sngl_inspiral.mass2,
+    sngl_inspiral.spin1z,
+    sngl_inspiral.spin2z,
+    sngl_inspiral.Gamma1,
+    coinc_inspiral.combined_far,
+    coinc_inspiral.snr,
+    coinc_inspiral.end_time
+    FROM
+    sim_coinc_map
+    JOIN
+    sim_inspiral
+    ON
+    sim_coinc_map.simulation_id==sim_inspiral.simulation_id
+    JOIN
+    coinc_event_map
+    ON
+    sim_coinc_map.coinc_event_id == coinc_event_map.coinc_event_id
+    JOIN
+    coinc_inspiral
+    ON
+    sim_coinc_map.coinc_event_id == coinc_inspiral.coinc_event_id
+    JOIN
+    sngl_inspiral
+    ON (
+        coinc_event_map.table_name == 'sngl_inspiral'
+        AND coinc_event_map.event_id == sngl_inspiral.event_id
+    )
+    WHERE
+    sngl_inspiral.ifo=='H1';
+    """
     np.savetxt(args.output, np.array(cur.execute(query).fetchall()),
                fmt='%f|%f|%f|%f|%f|%f|%f|%f|%f|%d|%e|%f|%f')
 
@@ -201,7 +206,7 @@ def train():
     required_sections = ['core',
                          'em_bright']
     assert all(config.has_section(s) for s in required_sections), \
-        'Config file must have sections %s'%(required_sections,)
+        'Config file must have sections %s' % (required_sections,)
 
     # get column names and values from config
     feature_cols = config.get('em_bright',
@@ -224,11 +229,13 @@ def train():
         df = pickle.load(f)
 
     assert all(col in df.keys() for col in all_cols), \
-        'Dataframe must contain columns %s'%(all_cols,)
+        'Dataframe must contain columns %s' % (all_cols,)
 
-    # create masked array based on threshold values, extract features and targets
+    # create masked array based on threshold values,
+    # extract features and targets
     mask = np.ones(len(df)).astype(bool)
-    for col, value, typ in zip(threshold_cols, threshold_values, threshold_type):
+    for col, value, typ in zip(threshold_cols, threshold_values,
+                               threshold_type):
         mask &= df[col] < value if typ == 'lesser' else \
             df[col] > value if typ == 'greater' else True
     features = df[feature_cols][mask]
@@ -268,13 +275,19 @@ def _create_param_sweep_plot(clf, category):
     """
     mass1 = np.linspace(1, 100, 1000)
     mass2 = np.linspace(1, 100, 1000)
-    t = Table(data=np.vstack((np.repeat(mass1, mass2.size),
-                          np.tile(mass2, mass1.size))).T, names=('mass1', 'mass2'))
+    t = Table(
+        data=np.vstack(
+            (np.repeat(mass1, mass2.size),
+             np.tile(mass2, mass1.size))
+        ).T, names=('mass1', 'mass2')
+    )
     mask = t['mass1'] > t['mass2']
     t = t[mask]
     spins = Table(
-        data=np.vstack((np.repeat(np.linspace(0, 1, 2), 2),
-        np.tile(np.linspace(0, 1, 2), 2))).T,
+        data=np.vstack(
+            (np.repeat(np.linspace(0, 1, 2), 2),
+             np.tile(np.linspace(0, 1, 2), 2))
+        ).T,
         names=('chi1', 'chi2')
     )
 
@@ -289,7 +302,9 @@ def _create_param_sweep_plot(clf, category):
         chi2 = spin_vals['chi2'] * np.ones(np.sum(mask))
 
         # make predictions and make plots
-        param_sweep_features = np.stack([t['mass1'], t['mass2'], chi1, chi2, SNR]).T
+        param_sweep_features = np.stack(
+            [t['mass1'], t['mass2'], chi1, chi2, SNR]
+        ).T
         predictions = clf.predict_proba(param_sweep_features).T[1]
         # plot against m1-m2 the non-zero p-values
         make_plots(param_sweep_features, predictions, title, (fig, idx+1))
@@ -302,7 +317,6 @@ def make_plots(features, predictions, title, fig_idx):
     # indices 0 and 1 correspond to mass1 and mass2 respectively
     plt.scatter(features.T[0], features.T[1],
                 s=10, c=predictions)
-    #plt.grid(linestyle='--')
     plt.title(title)
     plt.tight_layout()
     plt.colorbar(label='Probability')
@@ -313,7 +327,10 @@ def make_plots(features, predictions, title, fig_idx):
     Mc = (M1*M2)**(3./5.)/(M1 + M2)**(1./5.)
     Mc = np.tril(Mc).T
 
-    CS = plt.contour(M1, M2, Mc, levels=[5, 6, 7, 8, 9], colors='black', linewidths=1)
+    CS = plt.contour(
+        M1, M2, Mc, levels=[5, 6, 7, 8, 9],
+        colors='black', linewidths=1
+    )
 
     plt.clabel(CS, inline=True, fontsize=16)
     plt.xlim((1, 50))

@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Shaon Ghosh, Deep Chatterjee, Shasvath Kapadia
+# Copyright (C) 2018 Shaon Ghosh, Deep Chatterjee
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -24,7 +24,8 @@ from configparser import ConfigParser
 from glob import glob
 
 
-def writeSubfile(executable, arguments, workdir, subfilename, accounting_group):
+def writeSubfile(executable, arguments, workdir, subfilename,
+                 accounting_group):
     line = 'universe = vanilla\n'
     line += 'executable = {}\n'.format(executable)
     line += 'arguments = "{}"\n'.format(arguments)
@@ -39,23 +40,21 @@ def writeSubfile(executable, arguments, workdir, subfilename, accounting_group):
 
 
 def main():
-    parser = ArgumentParser("Script to write the DAG for source_classification")
+    parser = ArgumentParser(
+        "Script to write the DAG for source_classification")
     parser.add_argument("-d", "--dagname", required=True,
                         help="Name of the dag file. Placed under --work-dir")
     parser.add_argument("-w", "--work-dir", required=True,
                         help="Working directory to store data outputs")
-    parser.add_argument("-i", "--file-dir", required=True,
-                        help="File containing input injection sqlite databases")
+    parser.add_argument(
+        "-i", "--file-dir", required=True,
+        help="File containing input injection sqlite databases"
+    )
     parser.add_argument("-c", "--config", required=True,
                         help="Name of the config file")
     parser.add_argument("-e", "--executables-dir", required=True,
                         help="Directory containing executables")
     args = parser.parse_args()
-
-    # The binaries that needs to be copied for condor jobs to run
-    #bin_path = os.path.join(args.executables_dir, 'bin')
-    #assert path.exists(bin_path), \
-    #    "{} does not have a bin".format(args.executables_dir)
 
     config = ConfigParser()
     config.read(args.config)
@@ -134,20 +133,29 @@ def main():
             em_bright_join_sub
         ),
         em_bright_categorize_executable: (
-            " --input $(macroinput) --output $(macrooutput) --eosname $(macroeos)",
+            " --input $(macroinput) --output $(macrooutput) "
+            "--eosname $(macroeos)",
             em_bright_categorize_sub
         ),
         em_bright_train_executable: (
-            " --input $(macroinput) --config $(macroconfig) --output $(macrooutput) --param-sweep-plot",
+            " --input $(macroinput) --config $(macroconfig) "
+            "--output $(macrooutput) --param-sweep-plot",
             em_bright_train_sub
         )
     }
     # write all sub files
     for exect, arg_sub in exec_arg_assoc.items():
-        writeSubfile(exect, arg_sub[0], abs_work_dir, arg_sub[1], accounting_group)
+        writeSubfile(
+            exect, arg_sub[0], abs_work_dir,
+            arg_sub[1], accounting_group
+        )
 
     # Creating list of sqlite files to create the dag
-    inj_list = glob(os.path.join(os.path.abspath(args.file_dir), inj_file_pattern))
+    inj_list = glob(
+        os.path.join(
+            os.path.abspath(args.file_dir), inj_file_pattern
+        )
+    )
     # Writing the DAG
     daglines = ''
     parentchildline = ''
@@ -165,16 +173,18 @@ def main():
         line = "JOB {}{} {}\n".format(em_bright_extract_nodename,
                                       idx,
                                       em_bright_extract_sub)
-        line += 'VARS {}{} macroinput="{}"\n'.format(em_bright_extract_nodename,
-                                                     idx,
-                                                     injFilename)
-        line += 'VARS {}{} macrooutput="{}"\n\n'.format(em_bright_extract_nodename,
-                                                        idx,
-                                                        output_fname)
+        line += 'VARS {}{} macroinput="{}"\n'.format(
+            em_bright_extract_nodename,
+            idx, injFilename
+        )
+        line += 'VARS {}{} macrooutput="{}"\n\n'.format(
+            em_bright_extract_nodename, idx, output_fname
+        )
         extracted_data_names.append(output_fname)
-        parentchildline += 'PARENT {}{} CHILD {}\n'.format(em_bright_extract_nodename,
-                                                           idx,
-                                                           em_bright_join_nodename)
+        parentchildline += 'PARENT {}{} CHILD {}\n'.format(
+            em_bright_extract_nodename, idx,
+            em_bright_join_nodename
+        )
         daglines += line
 
     # output for JOIN
@@ -185,14 +195,22 @@ def main():
 
     line = 'JOB {} {}\n'.format(em_bright_join_nodename,
                                 em_bright_join_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(em_bright_join_nodename,
-                                               abs_work_dir)
-    line += 'VARS {} macrooutput="{}"\n'.format(em_bright_join_nodename,
-                                                  join_output)
-    line += 'VARS {} macroconfig="{}"\n\n'.format(em_bright_join_nodename,
-                                                abs_config_file)
-    parentchildline += 'PARENT {} CHILD {}\n'.format(em_bright_join_nodename,
-                                                     em_bright_categorize_nodename)
+    line += 'VARS {} macroinput="{}"\n'.format(
+        em_bright_join_nodename,
+        abs_work_dir
+    )
+    line += 'VARS {} macrooutput="{}"\n'.format(
+        em_bright_join_nodename,
+        join_output
+    )
+    line += 'VARS {} macroconfig="{}"\n\n'.format(
+        em_bright_join_nodename,
+        abs_config_file
+    )
+    parentchildline += 'PARENT {} CHILD {}\n'.format(
+        em_bright_join_nodename,
+        em_bright_categorize_nodename
+    )
     daglines += line
 
     # input and output for CATEGORIZE
@@ -207,12 +225,14 @@ def main():
     line += 'VARS {} macroinput="{}"\n'.format(em_bright_categorize_nodename,
                                                categorize_input)
     line += 'VARS {} macrooutput="{}"\n'.format(em_bright_categorize_nodename,
-                                                  categorize_output)
+                                                categorize_output)
     line += 'VARS {} macroeos="{}"\n\n'.format(em_bright_categorize_nodename,
                                                em_bright_eos)
 
-    parentchildline += 'PARENT {} CHILD {}\n'.format(em_bright_categorize_nodename,
-                                                     em_bright_train_nodename)
+    parentchildline += 'PARENT {} CHILD {}\n'.format(
+        em_bright_categorize_nodename,
+        em_bright_train_nodename
+    )
     daglines += line
 
     # Training
@@ -227,9 +247,9 @@ def main():
     line += 'VARS {} macroinput="{}"\n'.format(em_bright_train_nodename,
                                                train_input)
     line += 'VARS {} macrooutput="{}"\n'.format(em_bright_train_nodename,
-                                                  train_output)
+                                                train_output)
     line += 'VARS {} macroconfig="{}"\n\n'.format(em_bright_train_nodename,
-                                                abs_config_file)
+                                                  abs_config_file)
 
     daglines += line
     daglines += parentchildline

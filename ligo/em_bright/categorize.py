@@ -15,8 +15,6 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-import os
-import sys
 import argparse
 
 import numpy as np
@@ -70,12 +68,12 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     m2_inj, m2_rec = df.inj_m2.values, df.rec_m2.values
     chi1_inj, chi1_rec = df.inj_spin1z.values, df.rec_spin1z.values
     chi2_inj, chi2_rec = df.inj_spin2z.values, df.rec_spin2z.values
-    m1_inj, m2_inj, chi1_inj, chi2_inj = regularize(m1_inj, m2_inj,
-            				chi1_inj, chi2_inj)
-    m1_rec, m2_rec, chi1_rec, chi2_rec = regularize(m1_rec, m2_rec,
-						    chi1_rec, chi2_rec)
-
-    #NS_classified = m2_inj < 3.0
+    m1_inj, m2_inj, chi1_inj, chi2_inj = regularize(
+        m1_inj, m2_inj, chi1_inj, chi2_inj
+    )
+    m1_rec, m2_rec, chi1_rec, chi2_rec = regularize(
+        m1_rec, m2_rec, chi1_rec, chi2_rec
+    )
     NS_classified = m2_inj < mNs_mass
 
     NS_classified = NS_classified.astype(int)
@@ -114,7 +112,7 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     df_complete = pd.DataFrame(output, columns=[
         'ID', 'm1_inj', 'm2_inj', 'chi1_inj', 'chi2_inj',
         'mc_inj', 'q_inj', 'R_isco_inj', 'Compactness_inj',
-	'm1_rec', 'm2_rec', 'chi1_rec', 'chi2_rec', 'mc_rec',
+        'm1_rec', 'm2_rec', 'chi1_rec', 'chi2_rec', 'mc_rec',
         'frac_mc_err', 'q_rec', 'R_isco_rec', 'Compactness_rec',
         'cfar', 'snr', 'gpstime', 'NS', 'EMB']
     )
@@ -129,9 +127,11 @@ def main():
                         help="Name of the input file")
     parser.add_argument("-o", "--output", action="store", type=str,
                         help="Name of the output file")
-    parser.add_argument("-e", "--eosname", default='2H',
-            help="Equation of state used compute remnant matter.")
+    parser.add_argument(
+        "-e", "--eosname", default='2H',
+        help="Equation of state used compute remnant matter."
+    )
     args = parser.parse_args()
-    
-    df_complete = embright_categorization(args.input, args.output,
-                                          eosname=args.eosname)
+
+    embright_categorization(args.input, args.output,
+                            eosname=args.eosname)

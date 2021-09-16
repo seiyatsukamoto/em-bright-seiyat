@@ -88,7 +88,6 @@ flake8:
     - .python:flake8
   stage: lint
   needs: []
-  allow_failure: true  # for now
 
 # -- docs -------------------
 #
