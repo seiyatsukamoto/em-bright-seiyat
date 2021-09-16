@@ -1,53 +1,122 @@
-.dash_dash_help: &dash_dash_help
-  - em_bright_categorize --help
-  - em_bright_dag_writer --help
-  - em_bright_extract --help
-  - em_bright_join --help
-  - em_bright_train --help
-
-.test_script: &test_script
-  before_script:
-  - pip install poetry
-  script:
-  - poetry install
-  - poetry run pytest
-  - poetry build
+include:
+  - project: computing/gitlab-ci-templates
+    file:
+      - python.yml
 
 stages:
+  - dist
   - test
-  - install
+  - lint
+  - docs
+  - deploy
 
-build_test_37:
-  image: python:3.7-buster
-  stage: test
-  <<: *test_script
+# -- dist -------------------
+#
+# This job makes the gwdatafind-X.Y.Z.tar.gz
+# distribution and uploads it as a job
+# artifact
+#
 
-build_test_38:
-  image: python:3.8-buster
-  stage: test
-  <<: *test_script
+tarball:
+  extends:
+    # https://computing.docs.ligo.org/gitlab-ci-templates/python/#.python:build
+    - .python:build
+  stage: dist
+  image: python:3
 
-build_test_39:
-  image: python:3.9-buster
+# -- test -------------------
+#
+# These jobs run the tests on
+# all supported platforms
+#
+
+# -- test with pip
+
+.test:
+  extends:
+    - .python:pytest
   stage: test
-  <<: *test_script
-  after_script:
-    - mv dist/* .
+  needs:
+    - tarball
+  variables:
+    # don't need the git repo
+    GIT_STRATEGY: none
+    # install from the tarball
+    INSTALL_TARGET: "em-bright-*.tar.*"
+    # the name of the module to report coverage for
+    COVERAGE_TARGET: "em_bright"
+    # configure pytest
+    PYTEST_OPTIONS: "-ra -v --pyargs ligo.em_bright"
+  script:
+    # run pytest
+    - !reference [".python:pytest", script]
+    # get list of entry points
+    - entrypoints=$(python -c "import pkg_resources; print('\n'.join(e.name for e in pkg_resources.iter_entry_points('console_scripts') if e.dist.project_name == 'em-bright'))")
+    # run --help for each of them
+    - for entrypoint in ${entrypoints};
+      do
+      python -m coverage run
+          --append
+          --source=${COVERAGE_TARGET}
+          $(which ${entrypoint}) --help
+      ; done
+
+test:python3.7:
+  extends:
+    - .test
+  image: python:3.7
+
+test:python3.8:
+  extends:
+    - .test
+  image: python:3.8
+
+test:python3.9:
+  extends:
+    - .test
+  image: python:3.9
+
+# -- lint -------------------
+#
+# These jobs check the code
+# for quality issues
+#
+
+flake8:
+  extends:
+    # https://computing.docs.ligo.org/gitlab-ci-templates/python/#.python:flake8
+    - .python:flake8
+  stage: lint
+  needs: []
+  allow_failure: true  # for now
+
+# -- docs -------------------
+#
+# These jobs run the sphinx
+# documentation build
+#
+
+docs:
+  extends:
+    # https://computing.docs.ligo.org/gitlab-ci-templates/python/#.python:sphinx
+    - .python:sphinx
+  stage: docs
+  needs: []
+  variables:
+    SOURCEDIR: "doc"
+  before_script:
+    - python -m pip install poetry
+    - poetry export --dev --output requirements.txt --without-hashes
+    - python -m pip install -r requirements.txt
+
+pages:
+  stage: deploy
+  needs:
+    - docs
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - mv html public
   artifacts:
     paths:
-      - '*tar.gz'
-      - '*whl'
-
-tar_whl:
-  image: python:3.9
-  stage: install
-  dependencies:
-    - build_test_37
-    - build_test_38
-    - build_test_39
-  before_script:
-    - pip install --upgrade pip
-  script:
-    - pip install ./*tar.gz
-    - pip install ./*whl
-    - *dash_dash_help
+      - public
