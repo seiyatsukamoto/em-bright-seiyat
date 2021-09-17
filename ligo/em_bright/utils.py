@@ -23,7 +23,6 @@ from configparser import ConfigParser
 import glob
 import sqlite3
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import Column, Table, vstack
@@ -273,6 +272,7 @@ def _create_param_sweep_plot(clf, category):
     the predictions for the classifier sweeping across
     masses.
     """
+    import matplotlib.pyplot as plt
     mass1 = np.linspace(1, 100, 1000)
     mass2 = np.linspace(1, 100, 1000)
     t = Table(
@@ -312,6 +312,7 @@ def _create_param_sweep_plot(clf, category):
 
 
 def make_plots(features, predictions, title, fig_idx):
+    import matplotlib.pyplot as plt
     fig_, idx = fig_idx
     fig_.add_subplot(4, 1, idx)
     # indices 0 and 1 correspond to mass1 and mass2 respectively
