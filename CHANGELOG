@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased 0.1.0
+## [0.1.0] - 2021-09-18
 
 - Port over em-bright functionaility from p-astro SHA 0b9c8247
 - Switch to poetry for dependency management and packaging
