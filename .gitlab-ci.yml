@@ -42,7 +42,7 @@ tarball:
     # don't need the git repo
     GIT_STRATEGY: none
     # install from the tarball
-    INSTALL_TARGET: "em-bright-*.tar.*"
+    INSTALL_TARGET: "ligo.em-bright-*.tar.*"
     # the name of the module to report coverage for
     COVERAGE_TARGET: "em_bright"
     # configure pytest
