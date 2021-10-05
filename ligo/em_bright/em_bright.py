@@ -62,7 +62,7 @@ def source_classification(m1, m2, chi1, chi2, snr,
 
     Examples
     --------
-    >>> from ligo import em_bright
+    >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification(2.0 ,1.0 ,0. ,0. ,10.0)
     (1.0, 1.0)
     """
@@ -147,7 +147,7 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
 
     Examples
     --------
-    >>> from ligo import em_bright
+    >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification_pe('posterior_samples.hdf5')
     (1.0, 0.9616727412238634)
     >>> em_bright.source_classification_pe('posterior_samples.dat', hdf5=False)  # noqa:E501
