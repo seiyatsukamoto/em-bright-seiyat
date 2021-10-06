@@ -154,9 +154,9 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
     (0.0, 0.0)
     """
     if hdf5:
-        data = h5py.File(posterior_samples_file, 'r')
-        engine = list(data['lalinference'].keys())[0]
-        samples = data['lalinference'][engine]['posterior_samples'][()]
+        with h5py.File(posterior_samples_file, 'r') as data:
+            engine = list(data['lalinference'].keys())[0]
+            samples = data['lalinference'][engine]['posterior_samples'][()]
         mc_det_frame = samples['mc']
         lum_dist = samples['dist']
         redshifts = get_redshifts(lum_dist)
