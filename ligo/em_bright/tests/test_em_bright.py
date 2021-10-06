@@ -10,26 +10,40 @@ from .. import em_bright
 
 def test_version():
     from .. import __version__
-    assert __version__ == '0.1.0'
+    assert __version__ == '0.1.1'
 
 
-def test_source_classification_pe():
+@pytest.mark.parametrize(
+    'posteriors, dtype, result',
+    [[[(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0),
+       (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
+      [('mc', '<f8'), ('q', '<f8'), ('a1', '<f8'),
+       ('a2', '<f8'), ('tilt1', '<f8'), ('tilt2', '<f8'),
+       ('dist', '<f8')],
+      (1.0, 1.0)],
+     [[(1.2, 1.0, 0.0, 0.0, 100.0),
+       (2.0, 0.5, 0.99, 0.99, 150.0)],
+      [('mc', '<f8'), ('q', '<f8'), ('a1', '<f8'),
+       ('a2', '<f8'), ('dist', '<f8')],
+      (1.0, 1.0)]]
+)
+def test_source_classification_pe(posteriors, dtype, result):
+    """Test em_bright classification from posterior
+    samples - both aligned and precessing cases.
+    """
     with NamedTemporaryFile() as f:
         filename = f.name
         with h5py.File(f, 'w') as tmp_h5:
             data = np.array(
-                [(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0),
-                 (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
-                dtype=[('mc', '<f8'), ('q', '<f8'),
-                       ('a1', '<f8'), ('a2', '<f8'), ('tilt1', '<f8'),
-                       ('tilt2', '<f8'), ('dist', '<f8')]
+                posteriors,
+                dtype=dtype
             )
             tmp_h5.create_dataset(
                 'lalinference/lalinference_mcmc/posterior_samples',
                 data=data
             )
         r = em_bright.source_classification_pe(filename)
-    assert r == (1.0, 1.0)
+    assert r == result
 
 
 @pytest.mark.parametrize(

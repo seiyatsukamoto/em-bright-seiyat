@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "0.1.0"
+version = "0.1.1"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 authors = [
     "Deep Chatterjee <deep.chatterjee@ligo.org>",

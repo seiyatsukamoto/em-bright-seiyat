@@ -171,11 +171,19 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
             mc = samples['mc_source']
         else:
             mc = samples['mc']
+
     q = samples['q']
     m1 = mc * (1 + q)**(1/5) * (q)**(-3/5)
     m2 = mc * (1 + q)**(1/5) * (q)**(2/5)
-    chi1 = samples['a1']*np.cos(samples['tilt1'])
-    chi2 = samples['a2']*np.cos(samples['tilt2'])
+
+    try:
+        chi1 = samples['a1'] * np.cos(samples['tilt1'])
+        chi2 = samples['a2'] * np.cos(samples['tilt2'])
+    except ValueError:
+        # for aligned-spin PE, a1, a2 is the z component
+        chi1 = samples['a1']
+        chi2 = samples['a2']
+
     M_rem = computeDiskMass(m1, m2, chi1, chi2)
     prediction_ns = np.sum(m2 <= threshold)/len(m2)
     prediction_em = np.sum(M_rem > 0)/len(M_rem)
