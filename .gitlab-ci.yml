@@ -100,6 +100,7 @@ docs:
     # https://computing.docs.ligo.org/gitlab-ci-templates/python/#.python:sphinx
     - .python:sphinx
   stage: docs
+  image: python:3.9
   needs: []
   variables:
     SOURCEDIR: "doc"
