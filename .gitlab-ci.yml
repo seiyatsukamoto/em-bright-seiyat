@@ -61,6 +61,26 @@ tarball:
           $(which ${entrypoint}) --help
       ; done
 
+test:python3.7:minimal:
+  extends:
+    - .test
+  image: python:3.7
+  needs: []
+  variables:
+    # install from the git repository
+    GIT_STRATEGY: fetch
+    INSTALL_TARGET: "."
+  before_script:
+    # replace the requirements as follows:
+    #    >=X.Y.Z ---> X.Y.Z  (exact pin to minimum)
+    #    ^X.Y    ---> ~X.Y    (pin to X.Y.*)
+    - sed -i -E
+          -e 's/>=/==/'
+          -e 's/\^/~/'
+          pyproject.toml
+    # then run everything else as normal
+    - !reference [".test", before_script]
+
 test:python3.7:
   extends:
     - .test

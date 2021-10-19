@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.2] - Unreleased
+
+- Handle hdf5 files using context manager.
+
 ## [0.1.1] - 2021-10-06
 
 - Make `source_classification_pe` work for both aligned and precessing cases
