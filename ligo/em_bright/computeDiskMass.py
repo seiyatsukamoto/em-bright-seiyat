@@ -268,7 +268,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
         thirdTerm = gamma
     combinedTerms = firstTerm - secondTerm + thirdTerm
 
-    if hasattr(combinedTerms, 'size') and combinedTerms.size > 1:
+    if hasattr(combinedTerms, 'ndim') and combinedTerms.ndim >= 1:
         lessthanzero = combinedTerms < 0.0
         combinedTerms[lessthanzero] = 0.0
     else:

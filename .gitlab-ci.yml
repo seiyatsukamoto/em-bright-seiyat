@@ -47,6 +47,8 @@ tarball:
     COVERAGE_TARGET: "em_bright"
     # configure pytest
     PYTEST_OPTIONS: "-ra -v --pyargs ligo.em_bright"
+    TESTS_REQUIRE: "coverage<6"
+
   script:
     # run pytest
     - !reference [".python:pytest", script]
