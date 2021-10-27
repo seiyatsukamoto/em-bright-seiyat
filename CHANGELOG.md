@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.1.2] - Unreleased
+## [0.1.2] - 2021-10-27
 
 - Handle hdf5 files using context manager.
+- Minor bug fixes in handling arrays in `computeDiskMass` code.
 
 ## [0.1.1] - 2021-10-06
 
