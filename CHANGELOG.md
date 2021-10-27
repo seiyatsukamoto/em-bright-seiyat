@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.3] - unreleased
+
+- No changes
+
 ## [0.1.2] - 2021-10-27
 
 - Handle hdf5 files using context manager.
