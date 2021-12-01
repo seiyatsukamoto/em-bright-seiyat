@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2021 Shaon Ghosh, Deep Chatterjee
+# Copyright (C) 2018-2022 Shaon Ghosh, Deep Chatterjee
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -23,6 +23,8 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from glob import glob
 
+from . import EOS_BAYES_FACTORS
+
 try:
     import htcondor
     from htcondor import dags
@@ -39,8 +41,7 @@ except ModuleNotFoundError:
 
 
 def main():
-    parser = ArgumentParser(
-        "Script to write the DAG for source_classification")
+    parser = ArgumentParser("Condor DAG writer for workflow")
     parser.add_argument("-d", "--dagname", required=True,
                         help="Name of the dag file. Placed under --work-dir")
     parser.add_argument("-w", "--work-dir", required=True,
@@ -100,10 +101,10 @@ def main():
                                                  'em_bright_categorize')
     em_bright_train_executable = config.get('executables',
                                             'em_bright_train')
-    # Get the EoS to be used for EM bright categorization
-    em_bright_eos = config.get('em_bright', 'eos_name')
+    em_bright_paramater_sweep_plot_executable = config.get(
+        'executables', 'em_bright_create_param_sweep_plot'
+    )
     # Define the executable arguments association
-    # FIXME the assoc should potentially be a part of the config
     exec_arg_assoc = {
         em_bright_extract_executable:
             " --input $(macroinput) --output $(macrooutput)",
@@ -111,11 +112,14 @@ def main():
             " --input $(macroinput) --config $(macroconfig)"
             " --output $(macrooutput)",
         em_bright_categorize_executable:
-            " --input $(macroinput) --output $(macrooutput) "
-            "--eosname $(macroeos)",
+            " --input $(macroinput) --output $(macrooutput)"
+            " --eosname $(macroeos)",
         em_bright_train_executable:
-            " --input $(macroinput) --config $(macroconfig) "
-            "--output $(macrooutput) --param-sweep-plot",
+            " --input $(macroinput) --config $(macroconfig)"
+            " --output $(macrooutput) --param-sweep-plot-prefix $(macroeos)",
+        em_bright_paramater_sweep_plot_executable:
+            " --input $(macroinput) --config $(macroconfig)"
+            " --verbose"
     }
     # create a dictionary of Submit instances
     condor_sub_dict = dict.fromkeys(exec_arg_assoc)
@@ -130,7 +134,6 @@ def main():
             log='$(executable).log',
             accounting_group=accounting_group
         )
-
     # Creating list of sqlite files to create the dag
     inj_list = glob(
         os.path.join(
@@ -181,44 +184,51 @@ def main():
         vars=em_bright_join_vars
     )
 
-    # input and output for CATEGORIZE
+    # input and output for CATEGORIZE/TRAIN
+    em_bright_categorize_vars = list()
+    em_bright_train_vars = list()
     categorize_input = join_output
-    categorize_output = \
-        em_bright_categorize_prefix + '-' + startT + '-' + duration + \
-        em_bright_categorize_suffix
-    categorize_output = os.path.join(abs_work_dir, categorize_output)
+    for em_bright_eos in EOS_BAYES_FACTORS:
+        categorize_output = \
+            em_bright_categorize_prefix + '-' + startT + '-' + duration + \
+            '-' + em_bright_eos + em_bright_categorize_suffix
+        categorize_output = os.path.join(abs_work_dir, categorize_output)
 
-    em_bright_categorize_vars = [
-        dict(
-            macroinput=categorize_input,
-            macrooutput=categorize_output,
-            macroeos=em_bright_eos
+        train_output = \
+            em_bright_train_prefix + '-' + startT + '-' + duration + \
+            '-' + em_bright_eos + em_bright_train_suffix
+        train_output = os.path.join(abs_work_dir, train_output)
+
+        em_bright_categorize_vars.append(
+            dict(
+                macroinput=categorize_input,
+                macrooutput=categorize_output,
+                macroeos=em_bright_eos
+            )
         )
-    ]
+        em_bright_train_vars.append(
+            dict(
+                macroinput=categorize_output,
+                macrooutput=train_output,
+                macroconfig=abs_config_file,
+                macroeos=em_bright_eos
+            )
+        )
     em_bright_categorize_layer = em_bright_join_layer.child_layer(
         name=em_bright_categorize_executable,
         submit_description=condor_sub_dict[em_bright_categorize_executable],
         vars=em_bright_categorize_vars
     )
-    # Training
-    train_input = categorize_output
-    train_output = \
-        em_bright_train_prefix + '-' + startT + '-' + duration + \
-        em_bright_train_suffix
-    train_output = os.path.join(abs_work_dir, train_output)
-
-    em_bright_train_vars = [
-        dict(
-            macroinput=train_input,
-            macrooutput=train_output,
-            macroconfig=abs_config_file
-        )
-    ]
-
-    em_bright_train_layer = em_bright_categorize_layer.child_layer(  # noqa: F841,E501
+    em_bright_train_layer = em_bright_categorize_layer.child_layer(
         name=em_bright_train_executable,
         submit_description=condor_sub_dict[em_bright_train_executable],
         vars=em_bright_train_vars
+    )
+    em_bright_param_sweep_layer = em_bright_train_layer.child_layer(  # noqa: F841,E501
+        name=em_bright_paramater_sweep_plot_executable,
+        submit_description=condor_sub_dict[
+            em_bright_paramater_sweep_plot_executable],
+        vars=[dict(macroinput=abs_work_dir, macroconfig=abs_config_file)]
     )
 
     print("DAG desription:\n", condor_dag.describe())

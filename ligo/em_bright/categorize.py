@@ -16,21 +16,32 @@
 
 
 import argparse
+import functools
+import os
 
 import numpy as np
 import pandas as pd
 import pickle
 
-from . import computeDiskMass
+from . import computeDiskMass, EOS_BAYES_FACTORS, EOS_MAX_MASS
+
+
+class _TupleHandler(object):
+    def __call__(self, func):
+        @functools.wraps(func)
+        def handle(*args, **kwargs):
+            try:
+                (infile, outfile, max_mass, eosname), *_ = args
+            except (ValueError, TypeError):
+                return func(*args, **kwargs)
+            return func(infile, outfile, max_mass, eosname)
+        return handle
 
 
 def regularize(m1, m2, chi1, chi2):
+    '''Transform masses based on the convention m1 > m2.
+    Apply the same for spins.
     '''
-    This script accepts the values of masses and spins in vector form and
-    makes sure that the mass1 is always larger than mass2 also, makes sure
-    that the spins of the objects are associated with the right object.
-    '''
-
     # Find cases where the mass2 is greater than the mass1
     largerMass1 = m1 >= m2
     largerMass2 = m2 > m1
@@ -56,16 +67,30 @@ def regularize(m1, m2, chi1, chi2):
     return (m_primary, m_secondary, chi_primary, chi_secondary)
 
 
-def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
-    '''
-    This script accept the injection-coinc file gotten from the injection
-    campaign. It then computes the inference for the EM-Bright and the NS
-    classifiers and adds them in the table. It further converts the table
-    in pandas DataFrame format and saves into a pickle file
+@_TupleHandler()
+def embright_categorization(inFile, outFile, eosname='2H', mNs_mass=None):
+    '''Categorize whether the binary has a neutron star, and any non-zero
+    remnant post merger, based on the ``eosname``.
+
+    Parameters
+    ----------
+    inFile : str
+        input filename
+    outFile : str
+        output filename
+    eosname : str
+        neutron star equation of state. Assumed implemented in lalsimulation.
+        Default 2H.
+    mNS_mass : float
+        Provide to override the maximum mass from ``eosname``.
     '''
     df = pd.read_table(inFile, delimiter='\t')
     m1_inj, m1_rec = df.inj_m1.values, df.rec_m1.values
     m2_inj, m2_rec = df.inj_m2.values, df.rec_m2.values
+    redshift_inj = df.inj_redshift.values
+    m1_inj_source = m1_inj / (1 + redshift_inj)
+    m2_inj_source = m2_inj / (1 + redshift_inj)
+
     chi1_inj, chi1_rec = df.inj_spin1z.values, df.rec_spin1z.values
     chi2_inj, chi2_rec = df.inj_spin2z.values, df.rec_spin2z.values
     m1_inj, m2_inj, chi1_inj, chi2_inj = regularize(
@@ -74,14 +99,18 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     m1_rec, m2_rec, chi1_rec, chi2_rec = regularize(
         m1_rec, m2_rec, chi1_rec, chi2_rec
     )
-    NS_classified = m2_inj < mNs_mass
-
+    m1_inj_source, m2_inj_source, _, _ = regularize(
+        m1_inj_source, m2_inj_source, chi1_inj, chi2_inj
+    )  # spins regularized from previous step.
+    if mNs_mass:
+        NS_classified = m2_inj_source < mNs_mass
+    else:
+        NS_classified = m2_inj_source < EOS_MAX_MASS[eosname]
     NS_classified = NS_classified.astype(int)
 
     R_isco_hat_inj = computeDiskMass.compute_isco(chi1_inj)
     R_isco_hat_rec = computeDiskMass.compute_isco(chi1_rec)
 
-    # For this work we are using the EoS 2H result in the file equil_2H.dat
     Compactness_inj, *_ = computeDiskMass.computeCompactness(m2_inj,
                                                              eosname=eosname)
     Compactness_rec, *_ = computeDiskMass.computeCompactness(m2_rec,
@@ -95,13 +124,15 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     q_inj = m1_inj/m2_inj
     q_rec = m1_rec/m2_rec
 
-    disk_mass_inj = computeDiskMass.computeDiskMass(m1_inj, m2_inj, chi1_inj,
-                                                    chi2_inj, eosname=eosname)
-    EMB_classified = disk_mass_inj > 0.0
+    disk_mass_inj = computeDiskMass.computeDiskMass(
+        m1_inj_source, m2_inj_source, chi1_inj,
+        chi2_inj, eosname=eosname
+    )
+    EMB_classified = disk_mass_inj > 1e-3
     EMB_classified = EMB_classified.astype(int)
 
     output = np.vstack(
-        (m1_inj, m2_inj, chi1_inj, chi2_inj, df.inj_redshift.values,
+        (m1_inj, m2_inj, chi1_inj, chi2_inj, redshift_inj,
          mc_inj, q_inj, R_isco_hat_inj, Compactness_inj,
          m1_rec, m2_rec, chi1_rec, chi2_rec,
          mc_rec, frac_mc_err, q_rec, R_isco_hat_rec, Compactness_rec,
@@ -116,6 +147,13 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
         'frac_mc_err', 'q_rec', 'R_isco_rec', 'Compactness_rec',
         'cfar', 'snr', 'gpstime', 'NS', 'EMB']
     )
+    # drop NSs above max-mass
+    try:
+        max_mass = EOS_MAX_MASS[eosname]
+    except KeyError:
+        raise NotImplementedError
+    drop_mask = (m1_inj_source > max_mass) & (m1_inj_source < 3.0)  # noqa: E501; Restricts m2 by construction
+    df_complete = df_complete.loc[~drop_mask]
     with open(outFile, 'wb') as f:
         pickle.dump(df_complete, f)
     return df_complete
@@ -135,3 +173,43 @@ def main():
 
     embright_categorization(args.input, args.output,
                             eosname=args.eosname)
+
+
+def main_all():
+    parser = argparse.ArgumentParser(
+        "Run categorization on all available EoSs: "
+        f"{EOS_BAYES_FACTORS.keys()}\n"
+        "Output will be tagged by EoS names."
+    )
+    parser.add_argument(
+        "-i", "--input", action="store", type=str,
+        help="Name of the input file"
+    )
+    parser.add_argument(
+        "-d", "--output-directory", type=str,
+        help="Output directory"
+    )
+    parser.add_argument(
+        "-o", "--output-prefix", action="store",
+        type=str, help="Input prefix "
+    )
+    parser.add_argument(
+        "-p", "--pool", default=1, type=int,
+        help="Pool size"
+    )
+    args = parser.parse_args()
+
+    from multiprocessing import Pool
+    eos_args = [
+        (
+            args.input, os.path.join(
+                args.output_directory,
+                f"{args.output_prefix}_{eosname}.pkl"
+            ),
+            EOS_MAX_MASS[eosname],
+            eosname
+        )
+        for eosname in EOS_BAYES_FACTORS
+    ]
+    with Pool(args.pool) as p:
+        p.map(embright_categorization, eos_args)

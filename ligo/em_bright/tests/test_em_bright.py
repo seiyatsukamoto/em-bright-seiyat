@@ -1,11 +1,14 @@
+from pathlib import Path
 from tempfile import NamedTemporaryFile
+
 import numpy as np
 import h5py
+import pandas as pd
 
 import pytest
 from unittest.mock import Mock
 
-from .. import em_bright
+from .. import em_bright, categorize, EOS_MAX_MASS
 
 
 def test_version():
@@ -96,7 +99,25 @@ def test_mock_classifier():
 )
 def test_compute_disk_mass(m1, m2, chi1, chi2,
                            eosname, non_zero_remnant):
-    has_remnant = em_bright.computeDiskMass(
+    has_remnant = em_bright.computeDiskMass.computeDiskMass(
         m1, m2, chi1, chi2, eosname=eosname
     ) > 0.
     assert has_remnant == non_zero_remnant
+
+
+def test_embright_categorization():
+    for eosname, max_mass in EOS_MAX_MASS.items():
+        with NamedTemporaryFile() as tf:
+            outFile = tf.name
+        categorize.embright_categorization(
+            Path(__file__).parents[0] / 'data/test_categorize_data.tbl',
+            outFile, eosname=eosname
+        )
+        # read in pickle file
+        res = pd.read_pickle(outFile)
+        assert ~np.all(
+            np.logical_xor(
+                res.NS.values.astype(bool),
+                res.m2_inj.values < EOS_MAX_MASS[eosname]
+            )
+        )

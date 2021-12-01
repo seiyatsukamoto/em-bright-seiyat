@@ -32,6 +32,8 @@ htcondor = ">=9.0.6"
 
 [tool.poetry.scripts]
 em_bright_categorize = 'ligo.em_bright.categorize:main'
+em_bright_categorize_all_eos = 'ligo.em_bright.categorize:main_all'
+em_bright_create_param_sweep_plot = 'ligo.em_bright.utils:param_sweep_plot'
 em_bright_dag_writer = 'ligo.em_bright.dag_writer:main'
 em_bright_extract = 'ligo.em_bright.utils:extract'
 em_bright_join = 'ligo.em_bright.utils:join'

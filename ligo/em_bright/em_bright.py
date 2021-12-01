@@ -2,14 +2,28 @@
 compact binaries using trained supervised classifier
 """
 import h5py
-import pickle
 
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import cosmology, units as u
 
-from . import PACKAGE_FILENAMES
-from .computeDiskMass import computeDiskMass
+from . import (
+    EOS_BAYES_FACTORS,
+    PACKAGE_FILENAMES,
+    computeDiskMass,
+    utils
+)
+
+
+_classifiers = {
+    eos: utils._open_and_return_clfs(
+        PACKAGE_FILENAMES[f'{eos}.pickle']
+    )
+    for eos in EOS_BAYES_FACTORS
+}
+"""Classifiers keyed on EOS names. Order (clf_ns, clf_em)"""
+assert set(_classifiers) == set(EOS_BAYES_FACTORS), "Inconsistency in"
+" number of trained classifiers."
 
 
 def mchirp(m1, m2):
@@ -52,31 +66,44 @@ def source_classification(m1, m2, chi1, chi2, snr,
 
     Notes
     -----
-    By default the classifiers are trained using the
-    ``KNearestNeighbor`` algorithm from ``scikit-learn``,
-    data is used to make predictions. Custom `ns_classifier`,
-    `emb_classifier` can be supplied so long as they provide
-    ``predict_proba`` method and the feature set is
-    [[mass1, mass2, spin1z, spin2z, snr]].
-
+    By default the classifiers, trained based
+    on different nuclear equations of state (EoSs)
+    are downloaded from the project page:
+    https://git.ligo.org/deep.chatterjee/em-bright.
+    The methodology is described in arXiv:1911.00116.
+    The score from each classifier is weighted based on
+    the bayes factors of individual EoSs as mentioned in
+    Table I of arXiv:2104.08681.
+    However, if the trained classifiers are supplied
+    via ``ns_classifier`` and ``emb_classifier``,
+    the score is reported based on the classifier instead
+    of re-weighting the score.
     Examples
     --------
     >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification(2.0 ,1.0 ,0. ,0. ,10.0)
     (1.0, 1.0)
     """
-    if not ns_classifier:
-        with open(PACKAGE_FILENAMES['knn_ns_classifier.pkl'], 'rb') as f:
-            ns_classifier = pickle.load(f)
-    if not emb_classifier:
-        with open(PACKAGE_FILENAMES['knn_em_classifier.pkl'], 'rb') as f:
-            emb_classifier = pickle.load(f)
-
     features = [[m1, m2, chi1, chi2, snr]]
-    prediction_em, prediction_ns = \
-        emb_classifier.predict_proba(features).T[1], \
-        ns_classifier.predict_proba(features).T[1]
-    return prediction_ns[0], prediction_em[0]
+    try:
+        # custom classifiers supplied
+        return (
+            ns_classifier.predict_proba(features).T[1][0],
+            emb_classifier.predict_proba(features).T[1][0]
+        )
+    except AttributeError as e:
+        msg, *_ = e.args
+        if msg != """'NoneType' object has no attribute 'predict_proba'""":
+            raise
+
+    reweighted_ns_score = reweighted_emb_score = 0.
+    for eosname, bayes_factor in EOS_BAYES_FACTORS.items():
+        ns_classifier, emb_classifier = _classifiers[eosname]
+        reweighted_ns_score += ns_classifier.predict_proba(
+            features).T[1][0] * bayes_factor
+        reweighted_emb_score += emb_classifier.predict_proba(
+            features).T[1][0] * bayes_factor
+    return reweighted_ns_score, reweighted_emb_score
 
 
 def get_redshifts(distances, N=10000):
@@ -181,7 +208,7 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
         chi1 = samples['a1']
         chi2 = samples['a2']
 
-    M_rem = computeDiskMass(m1, m2, chi1, chi2)
+    M_rem = computeDiskMass.computeDiskMass(m1, m2, chi1, chi2)
     prediction_ns = np.sum(m2 <= threshold)/len(m2)
     prediction_em = np.sum(M_rem > 0)/len(M_rem)
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Shaon Ghosh, Shasvath Kapadia, Deep Chatterjee
+# Copyright (C) 2018-2021 Shaon Ghosh, Shasvath Kapadia, Deep Chatterjee
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -17,6 +17,7 @@
 
 import os
 import pickle
+import re
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
@@ -28,6 +29,12 @@ import pandas as pd
 from astropy.table import Column, Table, vstack
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
+
+from . import (
+    EOS_MAX_MASS,
+    EOS_BAYES_FACTORS,
+    computeDiskMass
+)
 
 
 def join():
@@ -191,8 +198,8 @@ def train():
         '-o', '--output',
         help='Pickled object storing the trained classifiers')
     parser.add_argument(
-        '-d', '--param-sweep-plot', action='store_true',
-        help='Supply to obtain a parameter sweep')
+        '-d', '--param-sweep-plot-prefix', default=None,
+        help='Supply filename prefix to output a parameter sweep plot')
     parser.add_argument(
         '-c', '--config', required=True,
         help='Config file with additional parameters')
@@ -242,6 +249,10 @@ def train():
     # train Nearest Neighbor classifier for each category
     clf_kwargs = eval(config.get('em_bright',
                                  'clf_kwargs'))
+    if clf_kwargs.get('metric') == 'mahalanobis':
+        clf_kwargs['metric_params'] = dict(
+            V=features.cov().values
+        )  # covariance matrix needed for mahalanobis metric
     clfs = []
     for category, target_value in targets.iteritems():
         # run KFold cross-validation
@@ -258,8 +269,11 @@ def train():
         # train on the full dataset
         clf = KNeighborsClassifier(**clf_kwargs)
         clf.fit(features, target_value)
-        if args.param_sweep_plot:
-            _create_param_sweep_plot(clf, category)
+        if args.param_sweep_plot_prefix:
+            _create_param_sweep_plot(
+                clf, category,
+                args.param_sweep_plot_prefix
+            )
         clfs.append(clf)
     # append the output filename of the classifier
     clfs.extend([args.output])
@@ -267,14 +281,19 @@ def train():
         pickle.dump(clfs, f)
 
 
-def _create_param_sweep_plot(clf, category):
-    """Create a fake recovered parameter space and plot
-    the predictions for the classifier sweeping across
-    masses.
+def _open_and_return_clfs(filename):
+    """Unpack pickle files storing classifier and return.
+    First return argument is HasNS, second HasRemnant
     """
-    import matplotlib.pyplot as plt
-    mass1 = np.linspace(1, 100, 1000)
-    mass2 = np.linspace(1, 100, 1000)
+    with open(filename, 'rb') as f:
+        clf_ns, clf_em, _filename = pickle.load(f)
+    return clf_ns, clf_em
+
+
+def _get_mass_grid():
+    """Get a grid over mass1, mass2. Used for parameter sweep."""
+    mass1 = np.linspace(1, 20, 200)
+    mass2 = np.linspace(1, 20, 200)
     t = Table(
         data=np.vstack(
             (np.repeat(mass1, mass2.size),
@@ -283,6 +302,17 @@ def _create_param_sweep_plot(clf, category):
     )
     mask = t['mass1'] > t['mass2']
     t = t[mask]
+    return t
+
+
+def _get_param_sweep(clf):
+    """Create a fake recovered parameter space return
+    the predictions for the classifier sweeping across
+    masses.
+    """
+    if clf.metric == "mahalanobis":
+        clf.n_jobs = 1  # issue with BallTree output
+    t = _get_mass_grid()
     spins = Table(
         data=np.vstack(
             (np.repeat(np.linspace(0, 1, 2), 2),
@@ -290,28 +320,133 @@ def _create_param_sweep_plot(clf, category):
         ).T,
         names=('chi1', 'chi2')
     )
-
-    fig = plt.figure(figsize=(14, 20))
-    for idx, spin_vals in enumerate(spins):
-        SNR = 10.
-        title = "chi1 = {0}; chi2 = {1}; SNR = {2}".format(spin_vals['chi1'],
-                                                           spin_vals['chi2'],
-                                                           SNR)
-        SNR *= np.ones(np.sum(mask))
-        chi1 = spin_vals['chi1'] * np.ones(np.sum(mask))
-        chi2 = spin_vals['chi2'] * np.ones(np.sum(mask))
-
+    SNR = 10.
+    res = list()
+    for spin_vals in spins:
+        SNR *= np.ones(len(t))
+        chi1 = spin_vals['chi1'] * np.ones(len(t))
+        chi2 = spin_vals['chi2'] * np.ones(len(t))
         # make predictions and make plots
         param_sweep_features = np.stack(
             [t['mass1'], t['mass2'], chi1, chi2, SNR]
         ).T
         predictions = clf.predict_proba(param_sweep_features).T[1]
-        # plot against m1-m2 the non-zero p-values
-        make_plots(param_sweep_features, predictions, title, (fig, idx+1))
-    plt.savefig('param_sweep_'+category+'.png')
+        res.append((param_sweep_features, predictions))
+    return res
 
 
-def make_plots(features, predictions, title, fig_idx):
+def _create_param_sweep_plot(clf, category, prefix=None):
+    """Create a parameter sweep plot using the supplied classifer"""
+    import matplotlib.pyplot as plt
+    res = _get_param_sweep(clf)
+    fig = plt.figure(figsize=(14, 20))
+    for idx, r in enumerate(res):
+        features, predictions = r
+        # FIXME: Ugly, but works
+        title = "chi1 = {0}; chi2 = {1}; SNR = {2}".format(
+            features[0][2], features[0][3],
+            features[0][4]
+        )
+        make_plots(
+            features, predictions, title,
+            (fig, idx+1), prefix=prefix, category=category
+        )
+    try:
+        plt.savefig(prefix+'_param_sweep_'+category+'.png')
+    except TypeError:
+        plt.savefig('param_sweep_'+category+'.png')
+
+
+def param_sweep_plot():
+    """Create parameter sweep plot, weighting classifier
+    results using bayes factor
+    """
+    parser = ArgumentParser(
+        "Create a parameter sweep, EoS predictions based")
+    parser.add_argument("-i", "--input", required=True,
+                        help="Directory storing trained classifier files")
+    parser.add_argument("-c", "--config", required=True,
+                        help="Config file")
+    parser.add_argument("-v", "--verbose", action='store_true',
+                        help="show progress")
+    args = parser.parse_args()
+
+    config = ConfigParser()
+    config.read(args.config)
+
+    train_prefix = config.get('output_filenames', 'em_bright_train_prefix')
+    train_suffix = config.get('output_filenames', 'em_bright_train_suffix')
+    clf_filenames = glob.glob(
+        os.path.join(args.input, f'{train_prefix}*{train_suffix}'))
+    if args.verbose:
+        print("Trained classifers", clf_filenames)
+    assert clf_filenames, "No files found. Check directory."
+    reweight_ns = dict.fromkeys(EOS_BAYES_FACTORS)
+    reweight_em = dict.fromkeys(EOS_BAYES_FACTORS)
+    import matplotlib.pyplot as plt
+    for fname in clf_filenames:
+        if args.verbose:
+            print(fname)
+        clf_ns, clf_em = _open_and_return_clfs(fname)
+        eosname, *_ = filter(
+            lambda _: re.match(
+                ".*" + _ + config.get('output_filenames',
+                                      'em_bright_train_suffix'),
+                fname
+            ), EOS_BAYES_FACTORS
+        )
+        res_ns = _get_param_sweep(clf_ns)
+        res_em = _get_param_sweep(clf_em)
+        reweight_ns.update(
+            {
+                eosname: dict(
+                    features=np.array(
+                        [f for f, p in res_ns]
+                    ),
+                    predictions=np.array(
+                        [p * EOS_BAYES_FACTORS[eosname] for f, p in res_ns]
+                    )
+                )
+            }
+        )
+        reweight_em.update(
+            {
+                eosname: dict(
+                    features=np.array(
+                        [f for f, p in res_em]
+                    ),
+                    predictions=np.array(
+                        [p * EOS_BAYES_FACTORS[eosname] for f, p in res_em]
+                    )
+                )
+            }
+        )
+    assert all(reweight_ns.values()), "Missing some listed EOSs."
+    assert all(reweight_em.values()), "Missing some listed EOSs."
+    reweighted_score_ns = np.sum(
+        [v['predictions'] for v in reweight_ns.values()],
+        axis=0
+    )
+    reweighted_score_em = np.sum(
+        [v['predictions'] for v in reweight_em.values()],
+        axis=0
+    )
+    for category, score in zip(
+            ["NS", "EMB"], [reweighted_score_ns, reweighted_score_em]):
+        fig = plt.figure(figsize=(14, 20))
+        for idx, (f, p) in enumerate(
+                zip(reweight_ns['SLy']['features'], score)):
+            title = "chi1 = {0}; chi2 = {1}; SNR = {2}".format(
+                f[0][2], f[0][3], f[0][4])
+            make_plots(
+                f, p, title, (fig, idx+1),
+                prefix='SLy', category=category
+            )
+        plt.savefig("reweighted_" + category + "_param_sweep.png")
+
+
+def make_plots(features, predictions, title, fig_idx,
+               prefix=None, category=None):
     import matplotlib.pyplot as plt
     fig_, idx = fig_idx
     fig_.add_subplot(4, 1, idx)
@@ -322,24 +457,53 @@ def make_plots(features, predictions, title, fig_idx):
     plt.tight_layout()
     plt.colorbar(label='Probability')
     # plot chirp mass contours
-    m1 = np.linspace(1, 50, 100)
-    m2 = np.linspace(1, 50, 100)
+    m1 = np.linspace(1, 20, 1000)
+    m2 = np.linspace(1, 20, 1000)
     M1, M2 = np.meshgrid(m1, m2)
+    s1z = np.unique(features.T[2])[0]*np.ones(M1.shape)
+    s2z = np.unique(features.T[3])[0]*np.ones(M2.shape)
+    rem_masses = list()
+    for _ in range(M1.shape[0]):
+        rem_masses.append(
+            computeDiskMass.computeDiskMass(
+                M1[_], M2[_], s1z[_], s2z[_],
+                eosname=prefix
+            )
+        )
+    rem_masses = np.array(rem_masses).reshape(M1.shape)
     Mc = (M1*M2)**(3./5.)/(M1 + M2)**(1./5.)
-    Mc = np.tril(Mc).T
-
-    CS = plt.contour(
-        M1, M2, Mc, levels=[5, 6, 7, 8, 9],
-        colors='black', linewidths=1
+    mask = M1 > M2
+    M1 = np.ma.masked_array(M1, mask=mask)
+    M2 = np.ma.masked_array(M2, mask=mask)
+    s1z = np.ma.masked_array(s1z, mask=mask)
+    s2z = np.ma.masked_array(s2z, mask=mask)
+    Mc = np.ma.masked_array(Mc, mask=mask)
+    rem_masses = np.ma.masked_array(
+        rem_masses, mask=mask*(M2 > EOS_MAX_MASS[prefix])
     )
-
+    CS = plt.contour(
+        M1, M2, Mc.T, levels=[2.22, 2.99, 4.73, 5, 6],
+        # (m1, m2) = (5, 1.4) -> Mc = 2.22
+        # (m1, m2) = (10, 1.4) -> Mc = 2.99
+        # (m1, m2) = (30, 1.4) -> Mc = 4.73
+        # three different NSBH populations; remaining values are ad-hoc
+        colors='black', linewidths=1.0
+    )
     plt.clabel(CS, inline=True, fontsize=16)
-    plt.xlim((1, 50))
-    plt.ylim((1, 14))
-    plt.axhline(y=3.0, c='r')
+    plt.xlim((1, 20))
+    plt.ylim((1, 12))
+    try:
+        max_mass = EOS_MAX_MASS[prefix]
+    except KeyError:
+        max_mass = 3.0
+    if 'NS' in category:
+        plt.axhline(y=max_mass, c='r', linewidth=1.2)
+    elif 'EM' in category:
+        CS = plt.contour(M1, M2, rem_masses.T,
+                         levels=[0., ], colors='red',
+                         linewidths=1.2)
     plt.xlabel(r'$m_1$', fontsize=16)
     plt.ylabel(r'$m_2$', fontsize=16)
-    plt.title(title)
 
 
 def run_k_fold_split(features, targets, n_splits=10, random_state=0,
@@ -405,6 +569,8 @@ def run_KNN_classifier(X_train, y_train,
     X_test : numpy.ndarray
         Feature testing set, can be array or DataFrame
     '''
+    if kwargs.get('metric') == 'mahalanobis':
+        kwargs['n_jobs'] = 1  # issue with KDTree, BallTree with n_jobs > 1
     clf = KNeighborsClassifier(**kwargs)
     clf.fit(X_train, y_train)
     predictions_proba = clf.predict_proba(X_test)
