@@ -53,7 +53,7 @@ tarball:
     # run pytest
     - !reference [".python:pytest", script]
     # get list of entry points
-    - entrypoints=$(python -c "import pkg_resources; print('\n'.join(e.name for e in pkg_resources.iter_entry_points('console_scripts') if e.dist.project_name == 'em-bright'))")
+    - entrypoints=$(python -c "import pkg_resources; print('\n'.join(e.name for e in pkg_resources.iter_entry_points('console_scripts') if e.dist.project_name == 'ligo.em-bright'))")
     # run --help for each of them
     - for entrypoint in ${entrypoints};
       do
