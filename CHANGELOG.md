@@ -2,7 +2,8 @@
 
 ## [0.1.3] - unreleased
 
-- No changes
+- Re-implement dag writer using htcondor python bindings
+- Remove unnecessary configuration variables from conf.ini
 
 ## [0.1.2] - 2021-10-27
 

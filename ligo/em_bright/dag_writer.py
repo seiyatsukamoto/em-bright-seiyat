@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Shaon Ghosh, Deep Chatterjee
+# Copyright (C) 2018-2021 Shaon Ghosh, Deep Chatterjee
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -23,20 +23,8 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from glob import glob
 
-
-def writeSubfile(executable, arguments, workdir, subfilename,
-                 accounting_group):
-    line = 'universe = vanilla\n'
-    line += 'executable = {}\n'.format(executable)
-    line += 'arguments = "{}"\n'.format(arguments)
-    line += 'output = $(executable).stdout\n'
-    line += 'error = $(executable).stderr\n'
-    line += 'log = $(executable).log\n'
-    line += 'accounting_group = {}\n'.format(accounting_group)
-    line += 'queue 1\n'
-
-    with open(os.path.join(workdir, subfilename), 'w') as f:
-        f.writelines(line)
+import htcondor
+from htcondor import dags
 
 
 def main():
@@ -73,15 +61,6 @@ def main():
     accounting_group = config.get('core',
                                   'accounting_group')
 
-    # Get subfile names
-    em_bright_extract_sub = config.get('sub_names',
-                                       'em_bright_extract')
-    em_bright_join_sub = config.get('sub_names',
-                                    'em_bright_join')
-    em_bright_categorize_sub = config.get('sub_names',
-                                          'em_bright_categorize')
-    em_bright_train_sub = config.get('sub_names',
-                                     'em_bright_train')
     # Get input and output file names prefixes
     em_bright_extract_prefix = config.get('output_filenames',
                                           'em_bright_extract_prefix')
@@ -99,16 +78,6 @@ def main():
                                         'em_bright_train_prefix')
     em_bright_train_suffix = config.get('output_filenames',
                                         'em_bright_train_suffix')
-
-    # Get node names
-    em_bright_extract_nodename = config.get('node_names',
-                                            'em_bright_extract')
-    em_bright_join_nodename = config.get('node_names',
-                                         'em_bright_join')
-    em_bright_categorize_nodename = config.get('node_names',
-                                               'em_bright_categorize')
-    em_bright_train_nodename = config.get('node_names',
-                                          'em_bright_train')
     # Get executable names
     em_bright_extract_executable = config.get('executables',
                                               'em_bright_extract')
@@ -123,31 +92,30 @@ def main():
     # Define the executable arguments association
     # FIXME the assoc should potentially be a part of the config
     exec_arg_assoc = {
-        em_bright_extract_executable: (
+        em_bright_extract_executable:
             " --input $(macroinput) --output $(macrooutput)",
-            em_bright_extract_sub
-        ),
-        em_bright_join_executable: (
+        em_bright_join_executable:
             " --input $(macroinput) --config $(macroconfig)"
             " --output $(macrooutput)",
-            em_bright_join_sub
-        ),
-        em_bright_categorize_executable: (
+        em_bright_categorize_executable:
             " --input $(macroinput) --output $(macrooutput) "
             "--eosname $(macroeos)",
-            em_bright_categorize_sub
-        ),
-        em_bright_train_executable: (
+        em_bright_train_executable:
             " --input $(macroinput) --config $(macroconfig) "
             "--output $(macrooutput) --param-sweep-plot",
-            em_bright_train_sub
-        )
     }
-    # write all sub files
+    # create a dictionary of Submit instances
+    condor_sub_dict = dict.fromkeys(exec_arg_assoc)
+    # create all sub files
     for exect, arg_sub in exec_arg_assoc.items():
-        writeSubfile(
-            exect, arg_sub[0], abs_work_dir,
-            arg_sub[1], accounting_group
+        condor_sub_dict[exect] = htcondor.Submit(
+            universe='vanilla',
+            executable=exect,
+            arguments=arg_sub,
+            output='$(executable).stdout',
+            error='$(executable).stderr',
+            log='$(executable).log',
+            accounting_group=accounting_group
         )
 
     # Creating list of sqlite files to create the dag
@@ -156,10 +124,10 @@ def main():
             os.path.abspath(args.file_dir), inj_file_pattern
         )
     )
-    # Writing the DAG
-    daglines = ''
-    parentchildline = ''
-    extracted_data_names = []
+    # Instantiate the DAG
+    condor_dag = dags.DAG()
+    # get vars for em_bright_extract layer
+    em_bright_extract_vars = []
     for idx, injFilename in enumerate(inj_list):
         match = re.search(sqlite_run_tag, os.path.basename(injFilename))
         if match is None:
@@ -169,49 +137,36 @@ def main():
         output_fname = \
             em_bright_extract_prefix + \
             prefix + '-' + startT + '-' + duration + em_bright_extract_suffix
+        em_bright_extract_vars.append(
+            dict(
+                macroinput=injFilename,
+                macrooutput=output_fname
+            )
+        )
 
-        line = "JOB {}{} {}\n".format(em_bright_extract_nodename,
-                                      idx,
-                                      em_bright_extract_sub)
-        line += 'VARS {}{} macroinput="{}"\n'.format(
-            em_bright_extract_nodename,
-            idx, injFilename
-        )
-        line += 'VARS {}{} macrooutput="{}"\n\n'.format(
-            em_bright_extract_nodename, idx, output_fname
-        )
-        extracted_data_names.append(output_fname)
-        parentchildline += 'PARENT {}{} CHILD {}\n'.format(
-            em_bright_extract_nodename, idx,
-            em_bright_join_nodename
-        )
-        daglines += line
-
+    em_bright_extract_layer = condor_dag.layer(
+        name=em_bright_extract_executable,
+        submit_description=condor_sub_dict[em_bright_extract_executable],
+        vars=em_bright_extract_vars
+    )
     # output for JOIN
     join_output = \
         em_bright_join_prefix + '-' + startT + '-' + \
         duration + em_bright_join_suffix
     join_output = os.path.join(abs_work_dir, join_output)
 
-    line = 'JOB {} {}\n'.format(em_bright_join_nodename,
-                                em_bright_join_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(
-        em_bright_join_nodename,
-        abs_work_dir
+    em_bright_join_vars = [
+        dict(
+            macroinput=abs_work_dir,
+            macrooutput=join_output,
+            macroconfig=abs_config_file
+        )
+    ]
+    em_bright_join_layer = em_bright_extract_layer.child_layer(
+        name=em_bright_join_executable,
+        submit_description=condor_sub_dict[em_bright_join_executable],
+        vars=em_bright_join_vars
     )
-    line += 'VARS {} macrooutput="{}"\n'.format(
-        em_bright_join_nodename,
-        join_output
-    )
-    line += 'VARS {} macroconfig="{}"\n\n'.format(
-        em_bright_join_nodename,
-        abs_config_file
-    )
-    parentchildline += 'PARENT {} CHILD {}\n'.format(
-        em_bright_join_nodename,
-        em_bright_categorize_nodename
-    )
-    daglines += line
 
     # input and output for CATEGORIZE
     categorize_input = join_output
@@ -220,21 +175,18 @@ def main():
         em_bright_categorize_suffix
     categorize_output = os.path.join(abs_work_dir, categorize_output)
 
-    line = 'JOB {} {}\n'.format(em_bright_categorize_nodename,
-                                em_bright_categorize_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(em_bright_categorize_nodename,
-                                               categorize_input)
-    line += 'VARS {} macrooutput="{}"\n'.format(em_bright_categorize_nodename,
-                                                categorize_output)
-    line += 'VARS {} macroeos="{}"\n\n'.format(em_bright_categorize_nodename,
-                                               em_bright_eos)
-
-    parentchildline += 'PARENT {} CHILD {}\n'.format(
-        em_bright_categorize_nodename,
-        em_bright_train_nodename
+    em_bright_categorize_vars = [
+        dict(
+            macroinput=categorize_input,
+            macrooutput=categorize_output,
+            macroeos=em_bright_eos
+        )
+    ]
+    em_bright_categorize_layer = em_bright_join_layer.child_layer(
+        name=em_bright_categorize_executable,
+        submit_description=condor_sub_dict[em_bright_categorize_executable],
+        vars=em_bright_categorize_vars
     )
-    daglines += line
-
     # Training
     train_input = categorize_output
     train_output = \
@@ -242,21 +194,23 @@ def main():
         em_bright_train_suffix
     train_output = os.path.join(abs_work_dir, train_output)
 
-    line = 'JOB {} {}\n'.format(em_bright_train_nodename,
-                                em_bright_train_sub)
-    line += 'VARS {} macroinput="{}"\n'.format(em_bright_train_nodename,
-                                               train_input)
-    line += 'VARS {} macrooutput="{}"\n'.format(em_bright_train_nodename,
-                                                train_output)
-    line += 'VARS {} macroconfig="{}"\n\n'.format(em_bright_train_nodename,
-                                                  abs_config_file)
+    em_bright_train_vars = [
+        dict(
+            macroinput=train_input,
+            macrooutput=train_output,
+            macroconfig=abs_config_file
+        )
+    ]
 
-    daglines += line
-    daglines += parentchildline
+    em_bright_train_layer = em_bright_categorize_layer.child_layer(  # noqa: F841,E501
+        name=em_bright_train_executable,
+        submit_description=condor_sub_dict[em_bright_train_executable],
+        vars=em_bright_train_vars
+    )
 
-    dagname = os.path.join(abs_work_dir, args.dagname)
-    with open(dagname, 'w') as f:
-        f.writelines(daglines)
+    print("DAG desription:\n", condor_dag.describe())
+    dags.write_dag(condor_dag, abs_work_dir,
+                   dag_file_name=args.dagname)
 
     # FIXME Condor refuses to carry over env vars
     # remove when solution is found
@@ -266,4 +220,4 @@ def main():
         if os.path.lexists(dst):
             os.remove(dst)
         shutil.copy(src, dst)
-    print('DAG is written in {}'.format(os.path.abspath(dagname)))
+    print('{} is written in {}'.format(args.dagname, abs_work_dir))
