@@ -191,8 +191,8 @@ def train():
         '-o', '--output',
         help='Pickled object storing the trained classifiers')
     parser.add_argument(
-        '-d', '--param-sweep-plot', action='store_true',
-        help='Supply to obtain a parameter sweep')
+        '-d', '--param-sweep-plot-prefix', default=None,
+        help='Supply filename prefix to output a parameter sweep plot')
     parser.add_argument(
         '-c', '--config', required=True,
         help='Config file with additional parameters')
@@ -258,8 +258,11 @@ def train():
         # train on the full dataset
         clf = KNeighborsClassifier(**clf_kwargs)
         clf.fit(features, target_value)
-        if args.param_sweep_plot:
-            _create_param_sweep_plot(clf, category)
+        if args.param_sweep_plot_prefix:
+            _create_param_sweep_plot(
+                clf, category,
+                args.param_sweep_plot_prefix
+            )
         clfs.append(clf)
     # append the output filename of the classifier
     clfs.extend([args.output])
@@ -267,7 +270,7 @@ def train():
         pickle.dump(clfs, f)
 
 
-def _create_param_sweep_plot(clf, category):
+def _create_param_sweep_plot(clf, category, prefix=None):
     """Create a fake recovered parameter space and plot
     the predictions for the classifier sweeping across
     masses.
@@ -308,7 +311,10 @@ def _create_param_sweep_plot(clf, category):
         predictions = clf.predict_proba(param_sweep_features).T[1]
         # plot against m1-m2 the non-zero p-values
         make_plots(param_sweep_features, predictions, title, (fig, idx+1))
-    plt.savefig('param_sweep_'+category+'.png')
+    try:
+        plt.savefig(prefix+'_param_sweep_'+category+'.png')
+    except TypeError:
+        plt.savefig('param_sweep_'+category+'.png')
 
 
 def make_plots(features, predictions, title, fig_idx):

@@ -87,8 +87,10 @@ def main():
                                                  'em_bright_categorize')
     em_bright_train_executable = config.get('executables',
                                             'em_bright_train')
-    # Get the EoS to be used for EM bright categorization
-    em_bright_eos = config.get('em_bright', 'eos_name')
+    # Get EoSs max masses and bayes factors to be used for categorization
+    em_bright_eos_bayes_factor_map = eval(
+        config.get('em_bright', 'eos_bayes_factor_map')
+    )
     # Define the executable arguments association
     # FIXME the assoc should potentially be a part of the config
     exec_arg_assoc = {
@@ -102,7 +104,7 @@ def main():
             "--eosname $(macroeos)",
         em_bright_train_executable:
             " --input $(macroinput) --config $(macroconfig) "
-            "--output $(macrooutput) --param-sweep-plot",
+            "--output $(macrooutput) --param-sweep-plot-prefix $(macroeos)",
     }
     # create a dictionary of Submit instances
     condor_sub_dict = dict.fromkeys(exec_arg_assoc)
@@ -168,40 +170,41 @@ def main():
         vars=em_bright_join_vars
     )
 
-    # input and output for CATEGORIZE
+    # input and output for CATEGORIZE/TRAIN
+    em_bright_categorize_vars = list()
+    em_bright_train_vars = list()
     categorize_input = join_output
-    categorize_output = \
-        em_bright_categorize_prefix + '-' + startT + '-' + duration + \
-        em_bright_categorize_suffix
-    categorize_output = os.path.join(abs_work_dir, categorize_output)
+    for em_bright_eos in em_bright_eos_bayes_factor_map:
+        categorize_output = \
+            em_bright_categorize_prefix + '-' + startT + '-' + duration + \
+            '-' + em_bright_eos + em_bright_categorize_suffix
+        categorize_output = os.path.join(abs_work_dir, categorize_output)
 
-    em_bright_categorize_vars = [
-        dict(
-            macroinput=categorize_input,
-            macrooutput=categorize_output,
-            macroeos=em_bright_eos
+        train_output = \
+            em_bright_train_prefix + '-' + startT + '-' + duration + \
+            '-' + em_bright_eos + em_bright_train_suffix
+        train_output = os.path.join(abs_work_dir, train_output)
+
+        em_bright_categorize_vars.append(
+            dict(
+                macroinput=categorize_input,
+                macrooutput=categorize_output,
+                macroeos=em_bright_eos
+            )
         )
-    ]
+        em_bright_train_vars.append(
+            dict(
+                macroinput=categorize_output,
+                macrooutput=train_output,
+                macroconfig=abs_config_file,
+                macroeos=em_bright_eos
+            )
+        )
     em_bright_categorize_layer = em_bright_join_layer.child_layer(
         name=em_bright_categorize_executable,
         submit_description=condor_sub_dict[em_bright_categorize_executable],
         vars=em_bright_categorize_vars
     )
-    # Training
-    train_input = categorize_output
-    train_output = \
-        em_bright_train_prefix + '-' + startT + '-' + duration + \
-        em_bright_train_suffix
-    train_output = os.path.join(abs_work_dir, train_output)
-
-    em_bright_train_vars = [
-        dict(
-            macroinput=train_input,
-            macrooutput=train_output,
-            macroconfig=abs_config_file
-        )
-    ]
-
     em_bright_train_layer = em_bright_categorize_layer.child_layer(  # noqa: F841,E501
         name=em_bright_train_executable,
         submit_description=condor_sub_dict[em_bright_train_executable],

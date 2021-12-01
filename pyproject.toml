@@ -32,6 +32,7 @@ flake8 = "^4.0.1"
 
 [tool.poetry.scripts]
 em_bright_categorize = 'ligo.em_bright.categorize:main'
+em_bright_categorize_all_eos = 'ligo.em_bright.categorize:main_all'
 em_bright_dag_writer = 'ligo.em_bright.dag_writer:main'
 em_bright_extract = 'ligo.em_bright.utils:extract'
 em_bright_join = 'ligo.em_bright.utils:join'

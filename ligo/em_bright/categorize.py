@@ -16,12 +16,26 @@
 
 
 import argparse
+import functools
+import os
 
 import numpy as np
 import pandas as pd
 import pickle
 
-from . import computeDiskMass
+from . import computeDiskMass, EOS_BAYES_FACTORS, EOS_MAX_MASS
+
+
+class _TupleHandler(object):
+    def __call__(self, func):
+        @functools.wraps(func)
+        def handle(*args, **kwargs):
+            try:
+                (infile, outfile, max_mass, eosname), *_ = args
+            except (ValueError, TypeError):
+                return func(*args, **kwargs)
+            return func(infile, outfile, max_mass, eosname)
+        return handle
 
 
 def regularize(m1, m2, chi1, chi2):
@@ -56,6 +70,7 @@ def regularize(m1, m2, chi1, chi2):
     return (m_primary, m_secondary, chi_primary, chi_secondary)
 
 
+@_TupleHandler()
 def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     '''
     This script accept the injection-coinc file gotten from the injection
@@ -135,3 +150,43 @@ def main():
 
     embright_categorization(args.input, args.output,
                             eosname=args.eosname)
+
+
+def main_all():
+    parser = argparse.ArgumentParser(
+        "Run categorization on all available EoSs: "
+        f"{EOS_BAYES_FACTORS.keys()}\n"
+        "Output will be tagged by EoS names."
+    )
+    parser.add_argument(
+        "-i", "--input", action="store", type=str,
+        help="Name of the input file"
+    )
+    parser.add_argument(
+        "-d", "--output-directory", type=str,
+        help="Output directory"
+    )
+    parser.add_argument(
+        "-o", "--output-prefix", action="store",
+        type=str, help="Input prefix "
+    )
+    parser.add_argument(
+        "-p", "--pool", default=1, type=int,
+        help="Pool size"
+    )
+    args = parser.parse_args()
+
+    from multiprocessing import Pool
+    eos_args = [
+        (
+            args.input, os.path.join(
+                args.output_directory,
+                f"{args.output_prefix}_{eosname}.pkl"
+            ),
+            EOS_MAX_MASS[eosname],
+            eosname
+        )
+        for eosname in EOS_BAYES_FACTORS
+    ]
+    with Pool(args.pool) as p:
+        p.map(embright_categorization, eos_args)
