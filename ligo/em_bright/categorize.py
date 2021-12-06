@@ -71,12 +71,21 @@ def regularize(m1, m2, chi1, chi2):
 
 
 @_TupleHandler()
-def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
-    '''
-    This script accept the injection-coinc file gotten from the injection
-    campaign. It then computes the inference for the EM-Bright and the NS
-    classifiers and adds them in the table. It further converts the table
-    in pandas DataFrame format and saves into a pickle file
+def embright_categorization(inFile, outFile, eosname='2H', mNs_mass=None):
+    '''Categorize whether the binary has a neutron star, and any non-zero
+    remnant post merger, based on the ``eosname``.
+
+    Parameters
+    ----------
+    inFile : str
+        input filename
+    outFile : str
+        output filename
+    eosname : str
+        neutron star equation of state. Assumed implemented in lalsimulation.
+        Default 2H.
+    mNS_mass : float
+        Provide to override the maximum mass from ``eosname``.
     '''
     df = pd.read_table(inFile, delimiter='\t')
     m1_inj, m1_rec = df.inj_m1.values, df.rec_m1.values
@@ -89,8 +98,10 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     m1_rec, m2_rec, chi1_rec, chi2_rec = regularize(
         m1_rec, m2_rec, chi1_rec, chi2_rec
     )
-    NS_classified = m2_inj < mNs_mass
-
+    if mNs_mass:
+        NS_classified = m2_inj < mNs_mass
+    else:
+        NS_classified = m2_inj < EOS_MAX_MASS[eosname]
     NS_classified = NS_classified.astype(int)
 
     R_isco_hat_inj = computeDiskMass.compute_isco(chi1_inj)

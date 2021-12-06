@@ -28,8 +28,7 @@ from htcondor import dags
 
 
 def main():
-    parser = ArgumentParser(
-        "Script to write the DAG for source_classification")
+    parser = ArgumentParser("Condor DAG writer for workflow")
     parser.add_argument("-d", "--dagname", required=True,
                         help="Name of the dag file. Placed under --work-dir")
     parser.add_argument("-w", "--work-dir", required=True,
