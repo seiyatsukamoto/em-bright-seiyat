@@ -12,7 +12,7 @@ stages:
 
 # -- dist -------------------
 #
-# This job makes the gwdatafind-X.Y.Z.tar.gz
+# This job makes the ligo.em_bright-X.Y.Z.tar.gz
 # distribution and uploads it as a job
 # artifact
 #
@@ -84,11 +84,19 @@ test:python3.7:minimal:
     - !reference [".test", before_script]
 
 test:python3.7:
+  variables:
+    # install from the git repository
+    GIT_STRATEGY: fetch  # FIXME: Ideally should be none; remove when timeout issue is fixed
+    INSTALL_TARGET: "."
   extends:
     - .test
   image: python:3.7
 
 test:python3.8:
+  variables:
+    # install from the git repository
+    GIT_STRATEGY: fetch  # FIXME: Ideally should be none; remove when timeout issue is fixed
+    INSTALL_TARGET: "."
   extends:
     - .test
   image: python:3.8
