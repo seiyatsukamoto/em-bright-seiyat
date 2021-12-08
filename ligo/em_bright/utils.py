@@ -23,11 +23,14 @@ from configparser import ConfigParser
 import glob
 import sqlite3
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import Column, Table, vstack
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
+
+from . import computeDiskMass, EOS_MAX_MASS
 
 
 def join():
@@ -271,6 +274,17 @@ def _create_param_sweep_plot(clf, category):
     """Create a fake recovered parameter space and plot
     the predictions for the classifier sweeping across
     masses.
+
+    Parameters
+    ----------
+    clf : sklearn.neighbors.KNeighborsClassifier
+        trained classifier
+    category : str
+       ``NS`` or ``EMB`` used as suffix for filename
+    prefix : str
+       String to be used as prefix. If one of EOS
+       in ``EOS_MAX_MASS``, then plot uses corresponding
+       maximum allowed mass.
     """
     import matplotlib.pyplot as plt
     mass1 = np.linspace(1, 100, 1000)
@@ -307,12 +321,36 @@ def _create_param_sweep_plot(clf, category):
         ).T
         predictions = clf.predict_proba(param_sweep_features).T[1]
         # plot against m1-m2 the non-zero p-values
-        make_plots(param_sweep_features, predictions, title, (fig, idx+1))
-    plt.savefig('param_sweep_'+category+'.png')
+        make_plots(
+            param_sweep_features, predictions, title,
+            (fig, idx+1), prefix=prefix, category=cateogry
+        )
+    try:
+        plt.savefig(prefix+'_param_sweep_'+category+'.png')
+    except TypeError:
+        plt.savefig('param_sweep_'+category+'.png')
 
 
-def make_plots(features, predictions, title, fig_idx):
-    import matplotlib.pyplot as plt
+def make_plots(features, predictions, title, fig_idx,
+               prefix=None, category=None):
+    """Create a mesh plot with parameters and their corresponding
+    predictions for HasNS.
+
+    Parameters
+    ----------
+    features : np.ndarray
+        Feature vector
+    predictions : np.ndarray
+        Prediction vector
+    title : str
+        title to be used. If ``prefix`` is supplied, it is prepended.
+    fig_idx : tuple
+        (figure instance, integer index)
+    prefix : str
+        Prefix to title. If an EoS name in ``EOS_MAX_MASS``, the
+        figure has a horizontal line to corresponding to maximum
+        mass allowed.
+    """
     fig_, idx = fig_idx
     fig_.add_subplot(4, 1, idx)
     # indices 0 and 1 correspond to mass1 and mass2 respectively
@@ -324,9 +362,14 @@ def make_plots(features, predictions, title, fig_idx):
     # plot chirp mass contours
     m1 = np.linspace(1, 50, 100)
     m2 = np.linspace(1, 50, 100)
+    s1z = np.unique(features.T[2])[0]*np.ones(m1.shape)
+    s2z = np.unique(features.T[3])[0]*np.ones(m2.shape)
+    rem_masses = computeDiskMass(m1, m2, s1z, s2z, eosname=category)
+
     M1, M2 = np.meshgrid(m1, m2)
     Mc = (M1*M2)**(3./5.)/(M1 + M2)**(1./5.)
     Mc = np.tril(Mc).T
+
 
     CS = plt.contour(
         M1, M2, Mc, levels=[5, 6, 7, 8, 9],
@@ -336,7 +379,11 @@ def make_plots(features, predictions, title, fig_idx):
     plt.clabel(CS, inline=True, fontsize=16)
     plt.xlim((1, 50))
     plt.ylim((1, 14))
-    plt.axhline(y=3.0, c='r')
+    try:
+        max_mass = EOS_MAX_MASS[prefix]
+    except KeyError:
+        max_mass = 3.0
+    plt.axhline(y=max_mass, c='r')
     plt.xlabel(r'$m_1$', fontsize=16)
     plt.ylabel(r'$m_2$', fontsize=16)
     plt.title(title)
