@@ -29,6 +29,7 @@ from astropy.table import Column, Table, vstack
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 
+from . import EOS_MAX_MASS, computeDiskMass
 
 def join():
     """
