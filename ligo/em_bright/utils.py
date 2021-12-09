@@ -31,6 +31,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 from . import EOS_MAX_MASS, computeDiskMass
 
+
 def join():
     """
     Joins the extracted sim-coinc data from GstLAL injection
@@ -321,7 +322,8 @@ def _create_param_sweep_plot(clf, category, prefix=None):
         plt.savefig('param_sweep_'+category+'.png')
 
 
-def make_plots(features, predictions, title, fig_idx):
+def make_plots(features, predictions, title, fig_idx,
+               prefix=None, category=None):
     import matplotlib.pyplot as plt
     fig_, idx = fig_idx
     fig_.add_subplot(4, 1, idx)
@@ -370,9 +372,9 @@ def make_plots(features, predictions, title, fig_idx):
     if 'NS' in category:
         plt.axhline(y=max_mass, c='r', linewidths=1.2)
     elif 'EM' in category:
-        CS = ax.contour(M1, M2, rem_masses,
-                        levels=[0.], colors=['red'],
-                        linewidths=1.2)
+        CS = plt.contour(M1, M2, rem_masses,
+                         levels=[0.], colors=['red'],
+                         linewidths=1.2)
     plt.xlabel(r'$m_1$', fontsize=16)
     plt.ylabel(r'$m_2$', fontsize=16)
 
