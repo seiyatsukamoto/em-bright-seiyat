@@ -310,7 +310,10 @@ def _create_param_sweep_plot(clf, category, prefix=None):
         ).T
         predictions = clf.predict_proba(param_sweep_features).T[1]
         # plot against m1-m2 the non-zero p-values
-        make_plots(param_sweep_features, predictions, title, (fig, idx+1))
+        make_plots(
+            param_sweep_features, predictions, title,
+            (fig, idx+1), prefix=prefix, category=category
+        )
     try:
         plt.savefig(prefix+'_param_sweep_'+category+'.png')
     except TypeError:
@@ -331,21 +334,46 @@ def make_plots(features, predictions, title, fig_idx):
     m1 = np.linspace(1, 50, 100)
     m2 = np.linspace(1, 50, 100)
     M1, M2 = np.meshgrid(m1, m2)
+    s1z = np.unique(features.T[2])[0]*np.ones(M1.shape)
+    s2z = np.unique(features.T[3])[0]*np.ones(M2.shape)
+    rem_masses = list()
+    for _ in range(M1.shape[0]):
+        rem_masses.append(
+            computeDiskMass.computeDiskMass(
+                M1[_], M2[_], s1z[_], s2z[_],
+                eosname=category
+            )
+        )
+    rem_masses = np.array(rem_masses).reshape(M1.shape)
     Mc = (M1*M2)**(3./5.)/(M1 + M2)**(1./5.)
     Mc = np.tril(Mc).T
+    mask = M1 > M2
+    M1 = np.ma.masked_array(M1, mask=mask)
+    M2 = np.ma.masked_array(M2, mask=mask)
+    s1z = np.ma.masked_array(s1z, mask=mask)
+    s2z = np.ma.masked_array(s2z, mask=mask)
+    rem_masses = np.ma.masked_array(rem_masses, mask=mask)
 
     CS = plt.contour(
-        M1, M2, Mc, levels=[5, 6, 7, 8, 9],
-        colors='black', linewidths=1
+        M1, M2, Mc, levels=[2.22, 2.99, 4.73, 5, 6],
+        colors='black', linewidths=1.0
     )
 
     plt.clabel(CS, inline=True, fontsize=16)
     plt.xlim((1, 50))
     plt.ylim((1, 14))
-    plt.axhline(y=3.0, c='r')
+    try:
+        max_mass = EOS_MAX_MASS[prefix]
+    except KeyError:
+        max_mass = 3.0
+    if 'NS' in category:
+        plt.axhline(y=max_mass, c='r', linewidths=1.2)
+    elif 'EM' in category:
+        CS = ax.contour(M1, M2, rem_masses,
+                        levels=[0.], colors=['red'],
+                        linewidths=1.2)
     plt.xlabel(r'$m_1$', fontsize=16)
     plt.ylabel(r'$m_2$', fontsize=16)
-    plt.title(title)
 
 
 def run_k_fold_split(features, targets, n_splits=10, random_state=0,
