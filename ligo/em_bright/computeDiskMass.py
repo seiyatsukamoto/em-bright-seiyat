@@ -168,9 +168,6 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
         `None` when supplying `R_ns`.
     kerr : bool
         Supply to use the relativistic tidal parameter. See Fishbone (1971).
-    fromFile : bool
-        Supply to load EoS information from file. Currently, only `2H`
-        supported.
     R_ns : float
         Radius of the secondary, assuming it is a neutron star.
     max_mass : float
