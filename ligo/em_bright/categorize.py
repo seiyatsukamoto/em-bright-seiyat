@@ -101,16 +101,16 @@ def embright_categorization(inFile, outFile, mNs_mass=3.0, eosname='2H'):
     EMB_classified = EMB_classified.astype(int)
 
     output = np.vstack(
-        (df.id.values, m1_inj, m2_inj, chi1_inj, chi2_inj,
+        (m1_inj, m2_inj, chi1_inj, chi2_inj, df.redshift.values,
          mc_inj, q_inj, R_isco_hat_inj, Compactness_inj,
          m1_rec, m2_rec, chi1_rec, chi2_rec,
          mc_rec, frac_mc_err, q_rec, R_isco_hat_rec, Compactness_rec,
-         df.cfar.values, df.snr.values, df.gpstime, NS_classified,
+         df.cfar.values, df.snr.values, df.gpstime.values, NS_classified,
          EMB_classified)
     ).T
 
     df_complete = pd.DataFrame(output, columns=[
-        'ID', 'm1_inj', 'm2_inj', 'chi1_inj', 'chi2_inj',
+        'm1_inj', 'm2_inj', 'chi1_inj', 'chi2_inj', 'inj_redshift',
         'mc_inj', 'q_inj', 'R_isco_inj', 'Compactness_inj',
         'm1_rec', 'm2_rec', 'chi1_rec', 'chi2_rec', 'mc_rec',
         'frac_mc_err', 'q_rec', 'R_isco_rec', 'Compactness_rec',
