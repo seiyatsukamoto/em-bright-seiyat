@@ -9,7 +9,7 @@ __version__ = '0.1.2'
 PACKAGE_DATA_LINKS = {
     'knn_em_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/main/ligo/em_bright/data/knn_em_classifier.pkl',  # noqa: E501
     'knn_ns_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/main/ligo/em_bright/data/knn_ns_classifier.pkl',  # noqa: E501
-    'equil_2H.dat': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/move-data-dir/data/equil_2H.dat'  # noqa: E501
+    'equil_2H.dat': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/main/ligo/em_bright/data/equil_2H.dat'  # noqa: E501
 }
 
 _em_bright_loader = pkgutil.get_loader(__name__)
