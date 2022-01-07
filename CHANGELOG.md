@@ -1,10 +1,12 @@
 # Changelog
 
-## [0.1.3] - unreleased
+## [0.1.3] - 2022-01-07
 
 - Re-implement dag writer using htcondor python bindings.
 - Remove unnecessary configuration variables from conf.ini.
 - Don't package the classifiers; they will be downloaded if not present.
+- Add injected redshift to the categorization output.
+- Remove pin for astropy.
 
 ## [0.1.2] - 2021-10-27
 
