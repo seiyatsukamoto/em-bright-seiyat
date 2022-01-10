@@ -19,7 +19,7 @@ astropy = ">=4.0"
 pandas = "^1.0"
 lalsuite = "^7.0"
 h5py = ">=2.10.0"
-htcondor = "^9.3.1"
+htcondor = ">=9.0.6"
 
 
 [tool.poetry.dev-dependencies]
