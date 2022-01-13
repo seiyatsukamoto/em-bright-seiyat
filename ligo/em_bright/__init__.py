@@ -4,12 +4,12 @@ import pkgutil
 
 from urllib import request
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 PACKAGE_DATA_LINKS = {
-    'knn_em_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.3/ligo/em_bright/data/knn_em_classifier.pkl',  # noqa: E501
-    'knn_ns_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.3/ligo/em_bright/data/knn_ns_classifier.pkl',  # noqa: E501
-    'equil_2H.dat': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.3/ligo/em_bright/data/equil_2H.dat'  # noqa: E501
+    'knn_em_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.4/ligo/em_bright/data/knn_em_classifier.pkl',  # noqa: E501
+    'knn_ns_classifier.pkl': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.4/ligo/em_bright/data/knn_ns_classifier.pkl',  # noqa: E501
+    'equil_2H.dat': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v0.1.4/ligo/em_bright/data/equil_2H.dat'  # noqa: E501
 }
 
 _em_bright_loader = pkgutil.get_loader(__name__)

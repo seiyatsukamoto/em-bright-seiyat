@@ -1,8 +1,8 @@
 # Changelog
 
-## [0.1.4] - unreleased
+## [0.1.4] - 2022-01-13
 
-- No changes
+- Update dependencies meeting SCCB requirements.
 
 ## [0.1.3] - 2022-01-07
 
