@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
@@ -8,6 +6,8 @@ from scipy.interpolate import UnivariateSpline
 
 import lal
 import lalsimulation as lalsim
+
+from . import PACKAGE_FILENAMES
 
 
 def compute_isco(chi_bh):
@@ -112,7 +112,7 @@ def computeCompactness(M_ns, eosname='2H', R_ns=None,
         R_ns, max_mass = _r_ns_from_lal_simulation(M_ns, eosname)
         C_ns, m2_b = _compactness_baryon_mass(M_ns, R_ns)
     else:
-        with open(Path(__file__).parents[0] / 'data/equil_2H.dat', 'rb') as f:
+        with open(PACKAGE_FILENAMES['equil_2H.dat'], 'rb') as f:
             M_g, M_b, Compactness = np.loadtxt(f, unpack=True)
         max_mass = 2.834648092299807
         s = UnivariateSpline(M_g, Compactness, k=5)
