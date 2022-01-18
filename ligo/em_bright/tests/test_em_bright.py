@@ -10,7 +10,7 @@ from .. import em_bright
 
 def test_version():
     from .. import __version__
-    assert __version__ == '0.1.4'
+    assert __version__ == '0.1.5'
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.5] - 2022-01-18
+
+- implement fetching and caching package data using `astropy.data.utils`.
+
 ## [0.1.4] - 2022-01-13
 
 - Update dependencies meeting SCCB requirements.
