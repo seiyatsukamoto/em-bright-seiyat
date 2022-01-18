@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.6] - unreleased
+
+- no changes yet.
+
 ## [0.1.5] - 2022-01-18
 
 - implement fetching and caching package data using `astropy.data.utils`.
