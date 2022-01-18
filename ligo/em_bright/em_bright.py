@@ -1,15 +1,14 @@
 """Module containing tools for EM-Bright classification of
 compact binaries using trained supervised classifier
 """
-from pathlib import Path
-
-import pickle
 import h5py
+import pickle
 
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import cosmology, units as u
 
+from . import PACKAGE_FILENAMES
 from .computeDiskMass import computeDiskMass
 
 
@@ -67,12 +66,10 @@ def source_classification(m1, m2, chi1, chi2, snr,
     (1.0, 1.0)
     """
     if not ns_classifier:
-        with open(Path(__file__).parents[0] / 'data/knn_ns_classifier.pkl',
-                  'rb') as f:
+        with open(PACKAGE_FILENAMES['knn_ns_classifier.pkl'], 'rb') as f:
             ns_classifier = pickle.load(f)
     if not emb_classifier:
-        with open(Path(__file__).parents[0] / 'data/knn_em_classifier.pkl',
-                  'rb') as f:
+        with open(PACKAGE_FILENAMES['knn_em_classifier.pkl'], 'rb') as f:
             emb_classifier = pickle.load(f)
 
     features = [[m1, m2, chi1, chi2, snr]]
