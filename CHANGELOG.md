@@ -2,7 +2,7 @@
 
 ## [0.1.6] - unreleased
 
-- no changes yet.
+- Make htcondor a dev dependency.
 
 ## [0.1.5] - 2022-01-18
 

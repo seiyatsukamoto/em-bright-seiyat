@@ -19,7 +19,6 @@ astropy = ">=4.0"
 pandas = "^1.0"
 lalsuite = "^7.0"
 h5py = ">=2.10.0"
-htcondor = ">=9.0.6"
 
 
 [tool.poetry.dev-dependencies]
@@ -28,6 +27,7 @@ Sphinx = "^4.1.2"
 toml = "^0.10.2"
 nbsphinx = "^0.8.7"
 flake8 = "^4.0.1"
+htcondor = ">=9.0.6"
 
 
 [tool.poetry.scripts]

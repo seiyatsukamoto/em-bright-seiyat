@@ -23,8 +23,19 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from glob import glob
 
-import htcondor
-from htcondor import dags
+try:
+    import htcondor
+    from htcondor import dags
+    _HTCONDOR_INSTALLED = True
+except ModuleNotFoundError:
+    _HTCONDOR_INSTALLED = False
+    import warnings
+    warnings.warn(
+        "HTCondor python bindings need to be installed to use this script. "
+        "This script is only used in training. When training new classifiers, "
+        "create a developmental version by cloning the git repository, "
+        "and installing from the lock file."
+    )
 
 
 def main():
@@ -43,6 +54,8 @@ def main():
     parser.add_argument("-e", "--executables-dir", required=True,
                         help="Directory containing executables")
     args = parser.parse_args()
+
+    assert _HTCONDOR_INSTALLED, "HTCondor python bindings missing."
 
     config = ConfigParser()
     config.read(args.config)
