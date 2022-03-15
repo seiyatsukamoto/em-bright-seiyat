@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.2] - unreleased
+
+- No changes.
+
 ## [1.0.1] - 2022-03-15
 
 - Fix failing test v1.0.0.
