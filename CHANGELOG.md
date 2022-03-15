@@ -40,6 +40,13 @@
 - Bump sklearn version to 1.1. Retrain classifiers.
 - Add `request_disk` to the condor submit file. Using 1GB as a start.
 - Restrict astropy >= 5.1.
+- Add EoS marginalization to HasNS and HasRemnant. After this, the
+  package data will contain classifiers trained on several different
+  NS equations of state from literature. The HasNS and HasRemnant score
+  will be computed from each, and re-weighted based on the bayes factor
+  calculation done by Ghosh et. al. in https://doi.org/10.1103/PhysRevD.104.083003.
+
+- Drop python 3.7 support since IGWN environments no longer support it.
 
 ## [1.0.1] - 2022-03-15
 
