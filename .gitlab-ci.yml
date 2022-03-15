@@ -63,10 +63,10 @@ tarball:
           $(which ${entrypoint}) --help
       ; done
 
-test:python3.7:minimal:
+test:python3.8:minimal:
   extends:
     - .test
-  image: python:3.7
+  image: python:3.8
   needs: []
   variables:
     # install from the git repository
@@ -83,19 +83,10 @@ test:python3.7:minimal:
     # then run everything else as normal
     - !reference [".test", before_script]
 
-test:python3.7:
-  variables:
-    # install from the git repository
-    GIT_STRATEGY: fetch  # FIXME: Ideally should be none; remove when timeout issue is fixed
-    INSTALL_TARGET: "."
-  extends:
-    - .test
-  image: python:3.7
-
 test:python3.8:
   variables:
     # install from the git repository
-    GIT_STRATEGY: fetch  # FIXME: Ideally should be none; remove when timeout issue is fixed
+    GIT_STRATEGY: none
     INSTALL_TARGET: "."
   extends:
     - .test
