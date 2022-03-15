@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.1] - unreleased
+
+- No changes yet
+
 ## [1.0.0] - 2022-03-15
 
 - Add EoS marginalization to HasNS and HasRemnant. After this, the
