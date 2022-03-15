@@ -84,10 +84,6 @@ test:python3.8:minimal:
     - !reference [".test", before_script]
 
 test:python3.8:
-  variables:
-    # install from the git repository
-    GIT_STRATEGY: none
-    INSTALL_TARGET: "."
   extends:
     - .test
   image: python:3.8
