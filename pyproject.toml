@@ -24,10 +24,10 @@ scikit-learn = "==1.2.1"
 astropy = ">=5.2.1"
 pandas = ">=1.5.2"
 lalsuite = "^7.0"
+h5py = ">=3.7.0"
 htcondor = ">=9.0.6"
-h5py = ">=2.10.0"
-#gwemlightcurves = "^0.0.5"
-gwemlightcurves = {git = "https://github.com/mcoughlin/gwemlightcurves", branch = "master"}
+gwemlightcurves = "^0.0.5"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
