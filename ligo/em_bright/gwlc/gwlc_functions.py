@@ -3,6 +3,9 @@
 """
 import numpy as np
 import scipy.stats as stats
+from scipy.interpolate import interpolate as interp
+from gwemlightcurves import lightcurve_utils
+from gwemlightcurves.KNModels import KNTable
 from .gwlc_utils import alsing_dist, farrow_dist, zhu_dist
 
 np.random.seed(0)

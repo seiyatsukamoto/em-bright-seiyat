@@ -37,10 +37,9 @@ result_gp10 = np.array([[0.022264876109183446, 0.024506102696707492],
 
 # once full EOS implementaion is finished update np.ones(10)
 @pytest.mark.parametrize(
-    'EOS, m1, m2, thetas, EOS, result',
+    'EOS, m1, m2, thetas, result',
     [['gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10]]
 )
-
 
 def test_run_EOS(EOS, m1, m2, thetas, result):
     post_path = 'data/eos_post_PSRs+GW170817+J0030.csv'
@@ -59,7 +58,7 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
 
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
-    samples = run_EOS(EOS, m1, m2, thetas, N_EOS = N_draws, eospostdat = post, EOS_draws = draws, EOS_idx = idxs)
+    samples = gwlc_functions.run_EOS(EOS, m1, m2, thetas, N_EOS = N_draws, eospostdat = post, EOS_draws = draws, EOS_idx = idxs)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
     # check wind and dyn mej values
     assert (list(wind_mej[3:5]) == result[:, 1]).all
