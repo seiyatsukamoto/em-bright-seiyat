@@ -2,7 +2,6 @@ from pathlib import Path
 import pytest
 import numpy as np
 from ..gwlc import gwlc_functions
-# from mass_grid_gp10_test2 import run_EOS
 
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
@@ -32,20 +31,20 @@ def test_initial_mass_draws(Type, result):
     assert (m1 == result[0]).all
     assert (m2 == result[1]).all
 
+
 result_gp10 = np.array([[0.022264876109183446, 0.024506102696707492],
                         [0.0018540989881778943, 0.0006251326630963076]])
 
-# once full EOS implementaion is finished update np.ones(10)
+
 @pytest.mark.parametrize(
     'EOS, m1, m2, thetas, result',
     [['gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10]]
 )
-
 def test_run_EOS(EOS, m1, m2, thetas, result):
     post_path = 'data/eos_post_PSRs+GW170817+J0030.csv'
     with open(Path(__file__).parents[0] / post_path, 'rb') as f:
         post = np.genfromtxt(f, names=True, delimiter=",")
-    # Note: make sure original weighting gets re-implented for real case
+    # Note weights removed, files will be used from Zenodo outside of tests
     idxs = ['137', '138', '421', '422', '423',
             '424', '425', '426', '427', '428']
 
@@ -58,10 +57,8 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
 
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
-    samples = gwlc_functions.run_EOS(EOS, m1, m2, thetas, N_EOS = N_draws, eospostdat = post, EOS_draws = draws, EOS_idx = idxs)
+    samples = gwlc_functions.run_EOS(EOS, m1, m2, thetas, N_EOS=N_draws, eospostdat=post, EOS_draws=draws, EOS_idx=idxs)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
     # check wind and dyn mej values
     assert (list(wind_mej[3:5]) == result[:, 1]).all
     assert (list(dyn_mej[3:5]) == result[:, 0]).all
-
-# test_run_EOS('gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10)
