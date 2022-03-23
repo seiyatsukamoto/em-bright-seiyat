@@ -1,6 +1,7 @@
 from pathlib import Path
 import pytest
 import numpy as np
+<<<<<<< HEAD
 from unittest.mock import patch
 from gwemlightcurves.KNModels import KNTable
 from ..lightcurves import calc_lightcurves
@@ -9,6 +10,10 @@ from ..lightcurves.mass_distributions import BNS_uniform, BNS_LRR
 from ..lightcurves.mass_distributions import NSBH_uniform, NSBH_LRR
 from ..lightcurves.lightcurve_utils import load_eos_posterior
 
+=======
+from ..gwlc import gwlc_functions
+# from mass_grid_gp10_test2 import run_EOS
+>>>>>>> c4096a0 (working on additions)
 
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
@@ -21,6 +26,7 @@ far_result = [[1.75185058, 2.44593256, 1.99912136],
 zhu_result = [[8.24086231, 9.91239175, 6.84081889],
               [1.33484312, 1.3357914, 1.32818417]]
 
+<<<<<<< HEAD
 BNS_uni_result = [[2.4268996, 2.70593716, 2.18786574],
                   [1.34370059, 1.30106652, 1.98714215]]
 
@@ -193,6 +199,22 @@ def test_lightcurve_predictions(m1, m2, theta, yields_ejecta, percentile_results
     for percentile_type in percentile_types:
         for percentile, result in zip(percentiles[percentile_type], percentile_results[percentile_type]):  # noqa:E501
             assert abs(percentile-result) < 1e-6
+=======
+
+@pytest.mark.parametrize(
+    'Type, result',
+    [['BNS_alsing', als_result],
+     ['BNS_farrow', far_result],
+     ['NSBH_zhu', zhu_result],
+     ]
+)
+def test_initial_mass_draws(Type, result):
+    # five initial mass draws for unit test
+    mass_draws_test = 3
+    output = gwlc_functions.initial_mass_draws(Type, mass_draws_test)
+    m1, m2 = output[0], output[1]
+    # check component mass values
+>>>>>>> c4096a0 (working on additions)
     assert (m1 == result[0]).all
     assert (m2 == result[1]).all
 
@@ -229,6 +251,7 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
     assert (list(wind_mej[3:5]) == result[:, 1]).all
     assert (list(dyn_mej[3:5]) == result[:, 0]).all
 
+<<<<<<< HEAD
 @pytest.mark.parametrize(
     'samples, result',
     [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
@@ -251,3 +274,6 @@ def test_lightcurve_predictions(m1, m2, theta):
     lightcurve_data2, has_Remnant2, _, _ = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_eos=2)  # noqa:E501
     assert has_Remnant1 == 1.0
     assert has_Remnant2 == 0.5
+=======
+# test_run_EOS('gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10)
+>>>>>>> c4096a0 (working on additions)
