@@ -189,6 +189,7 @@ description = "Discover and load entry points from installed packages."
 category = "dev"
 optional = false
 python-versions = ">=3.6"
+<<<<<<< HEAD
 
 [[package]]
 name = "extinction"
@@ -200,6 +201,8 @@ python-versions = ">=3.5"
 
 [package.dependencies]
 numpy = ">=1.13.3"
+=======
+>>>>>>> c786444 (make htcondor a dev dependency)
 
 [[package]]
 name = "flake8"
@@ -1447,6 +1450,7 @@ docutils = [
 entrypoints = [
     {file = "entrypoints-0.4-py3-none-any.whl", hash = "sha256:f174b5ff827504fd3cd97cc3f8649f3693f51538c7e4bdf3ef002c8429d42f9f"},
     {file = "entrypoints-0.4.tar.gz", hash = "sha256:b706eddaa9218a19ebcd67b56818f05bb27589b1ca9e8d797b74affad4ccacd4"},
+<<<<<<< HEAD
 ]
 extinction = [
     {file = "extinction-0.4.6-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:027451d512555824cc7dc47a6d80fc7bcc3eae3ba616558e172278e8f29afc1d"},
@@ -1477,6 +1481,8 @@ extinction = [
     {file = "extinction-0.4.6-pp37-pypy37_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:46ba18fda0e822430ce74be6baeb880350a9603fadc96f9e8e46d2c109023881"},
     {file = "extinction-0.4.6-pp37-pypy37_pp73-win_amd64.whl", hash = "sha256:d82aab1de0a368e0c036e7126fc88677b33018f2b0cc9f8e4f64debede2f2ca1"},
     {file = "extinction-0.4.6.tar.gz", hash = "sha256:d16dec13a0404e04c3631f38628eb3b233ac07deac2950129dd136da8f7e4438"},
+=======
+>>>>>>> c786444 (make htcondor a dev dependency)
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -1485,24 +1491,6 @@ flake8 = [
 fonttools = [
     {file = "fonttools-4.29.1-py3-none-any.whl", hash = "sha256:1933415e0fbdf068815cb1baaa1f159e17830215f7e8624e5731122761627557"},
     {file = "fonttools-4.29.1.zip", hash = "sha256:2b18a172120e32128a80efee04cff487d5d140fe7d817deb648b2eee023a40e4"},
-]
-george = [
-    {file = "george-0.4.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:84337b508beb9220b05d80b7e9b4bb05a54cc7f858891cde0ee21d9b0751404e"},
-    {file = "george-0.4.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:2cc85b87822ea00b4b3e45eb352fdd71570c888cc5cddd90f1070134b208a968"},
-    {file = "george-0.4.0-cp36-cp36m-win_amd64.whl", hash = "sha256:a9669078294a3265b17bfe976b059c7f95a071fcdcac473c32c96c517c75179d"},
-    {file = "george-0.4.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:fb749eab44b60b5b9bcc9484cc994ce9b2dada24c07a51d377e742e99373aa84"},
-    {file = "george-0.4.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:f9e78e45015ddca5d75438e943b9df69e55e45256ab6718c6efe04a32dbca100"},
-    {file = "george-0.4.0-cp37-cp37m-win_amd64.whl", hash = "sha256:1bfc7461c2595dfda4d0b34fb1c2544f46193151563f252ed86a2e38adb77fbf"},
-    {file = "george-0.4.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:353ae21d24600b556783645baaefc793b3119835e6244a72a5bde65bf5256be3"},
-    {file = "george-0.4.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:bbe4af8e21da0e41fa88585531a288bcd71904667e47170e9a88c822711fc463"},
-    {file = "george-0.4.0-cp38-cp38-win_amd64.whl", hash = "sha256:261fa6f825b1c5e47c1e9e8d2fc19c120add816f25ed378ac8926b323c865cd5"},
-    {file = "george-0.4.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:7ba77db67bc9e002f587f0c5bc1cec6bf28df302882b73e60f10ed8449e0c2c8"},
-    {file = "george-0.4.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:31f5a98382dd63cfbec108e57063a731f3ad8e49e2486eed16155aedb92bded1"},
-    {file = "george-0.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:c205b201e27df1c7f62215b09dda0b8267839cb3fa5f6f12269cbbc365502cbc"},
-    {file = "george-0.4.0.tar.gz", hash = "sha256:3c88304b4a816c41b01198c084e3107ba7b0ab43881c60d249829eb2321245b1"},
-]
-gwemlightcurves = [
-    {file = "gwemlightcurves-0.0.5.tar.gz", hash = "sha256:4e50bf96b65639674d59e44794fcd7499371f3e8b682c1c009504f4547d67adb"},
 ]
 h5py = [
     {file = "h5py-3.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:a5320837c60870911645e9a935099bdb2be6a786fcf0dac5c860f3b679e2de55"},
