@@ -39,8 +39,8 @@ except ModuleNotFoundError:
         "and installing from the lock file."
     )
 
+    assert _HTCONDOR_INSTALLED, "HTCondor python bindings missing."
 
-def _add_common_workflow(condor_dag, args, common_submit_dict):
     config = ConfigParser()
     config.read(args.config)
     config_path = os.path.abspath(args.config)
