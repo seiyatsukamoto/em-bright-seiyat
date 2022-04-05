@@ -30,11 +30,11 @@ gwemlightcurves = "^0.0.5"
 
 
 [tool.poetry.dev-dependencies]
-pytest = "*"
-Sphinx = "*"
-toml = "*"
-nbsphinx = "*"
-flake8 = "*"
+pytest = "^5.2"
+Sphinx = "^4.1.2"
+toml = "^0.10.2"
+nbsphinx = "^0.8.7"
+flake8 = "^4.0.1"
 htcondor = ">=9.0.6"
 
 
