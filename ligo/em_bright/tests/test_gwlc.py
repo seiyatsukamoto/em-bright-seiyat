@@ -1,6 +1,7 @@
-from pathlib import Path
 import pytest
 import numpy as np
+from pathlib import Path
+from astropy.table import Table
 from ..gwlc import gwlc_functions
 
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
@@ -62,3 +63,15 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
     # check wind and dyn mej values
     assert (list(wind_mej[3:5]) == result[:, 1]).all
     assert (list(dyn_mej[3:5]) == result[:, 0]).all
+
+@pytest.mark.parametrize(
+    'Type, samples, result',
+    [['gp', Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
+)
+def test_ejecta_to_lc(Type, samples, result):
+    lightcurve_data = gwlc_functions.ejecta_to_lc(Type, samples)
+    # check peak r mag and intial and late mag value
+    r_mag = lightcurve_data['r mag']
+    assert (np.min(r_mag) == result[0])
+    assert (r_mag[0] == result[1])
+    assert (r_mag[150] == result[2])

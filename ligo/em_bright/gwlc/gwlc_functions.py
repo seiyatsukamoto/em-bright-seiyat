@@ -7,6 +7,8 @@ from scipy.interpolate import interpolate as interp
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
 from .gwlc_utils import alsing_dist, farrow_dist, zhu_dist
+from configparser import ConfigParser
+from pathlib import Path
 
 np.random.seed(0)
 
@@ -119,8 +121,11 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, eospostdat=None, EOS_draws=None, EOS
     mchirp = (m1*m2)**(3/5) / (m1+m2)**(1/5)
     eta = m1*m2/((m1+m2)*(m1+m2))
 
-    #fix spin lanthanide fraction value 
-    chi, Xlan = 0, 1e-3  
+    rel_path = 'em-bright/etc/conf.ini'
+    conf_path = Path(__file__).home() / rel_path
+    config = ConfigParser()
+    config.read(conf_path)
+    chi = float(config.get('gwlc_constants','chi'))
 
     data = np.vstack((m1,m2,chi,mchirp,eta,q)).T
     samples = KNTable((data), names = ('m1', 'm2', 'chi_eff', 'mchirp', 'eta', 'q'))
@@ -232,8 +237,12 @@ def EOS_samples(samples, thetas, nsamples, eospostdat, EOS_draws, EOS_idx, EOS =
            table of ejecta quantities
     '''  
 
-    #set spin to 0
-    chi, Xlan = 0, 1e-3
+    rel_path = 'em-bright/etc/conf.ini'
+    conf_path = Path(__file__).home() / rel_path
+    config = ConfigParser()
+    config.read(conf_path)
+    chi = float(config.get('gwlc_constants','chi'))
+    Xlan = float(config.get('gwlc_constants','Xlan'))
 
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
     chi_effs, Xlans, qs, mbnss = [], [], [], []
@@ -282,3 +291,90 @@ def EOS_samples(samples, thetas, nsamples, eospostdat, EOS_draws, EOS_idx, EOS =
     samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'Xlan', 'chi_eff', 'theta', 'mbns'))
 
     return samples
+
+def ejecta_to_lc(Type, samples, save_pkl = False):
+    '''Calculate lightcurves from ejecta quatities
+
+       Parameters
+       ----------
+       Type: str
+           initial mass distribution and merger type
+       samples: astropy Table
+           Table of ejecta quatities
+       save_pkl: bool
+            whether or not to save lightcurves to pickle files
+
+       Returns
+       -------
+       lightcurve_data: dictionary
+           ejecta quatities and lightcurves for various mag bands
+    '''
+
+    l = len(samples)
+    phis = 45 * np.ones(l)
+    samples['phi'] = phis
+
+    rel_path = 'em-bright/etc/conf.ini'
+    conf_path = Path(__file__).home() / rel_path
+    config = ConfigParser()
+    config.read(conf_path)
+
+    samples['tini'] = float(config.get('gwlc_constants','tini'))
+    samples['tmax'] = float(config.get('gwlc_constants','tmax'))
+    samples['dt'] = float(config.get('gwlc_constants','dt'))
+    samples['vmin'] = float(config.get('gwlc_constants','vmin'))
+    samples['th'] = float(config.get('gwlc_constants','th'))
+    samples['ph'] = float(config.get('gwlc_constants','ph'))
+    samples['kappa'] = float(config.get('gwlc_constants','kappa'))
+    samples['eps'] = float(config.get('gwlc_constants','eps'))
+    samples['alp'] = float(config.get('gwlc_constants','alp'))
+    samples['eth'] = float(config.get('gwlc_constants','eth'))
+    samples['flgbct'] = float(config.get('gwlc_constants','flgbct'))
+    samples['beta'] = float(config.get('gwlc_constants','beta'))
+    samples['kappa_r'] = float(config.get('gwlc_constants','kappa_r'))
+    samples['slope_r'] = float(config.get('gwlc_constants','slope_r'))
+    samples['theta_r'] = float(config.get('gwlc_constants','theta_r'))
+    samples['Ye'] = float(config.get('gwlc_constants','Ye'))
+
+    rel_path = 'svdmodels'
+    ModelPath = Path(__file__).parents[0] / rel_path
+    #ModelPath = "/home/cosmin.stachie/gwemlightcurves/output/svdmodels"
+    kwargs = {'SaveModel':False,'LoadModel':True,'ModelPath':ModelPath}
+    kwargs["doAB"] = True
+    kwargs["doSpec"] = False
+
+    model = "Bu2019inc"
+    model_tables = {}
+
+    sample_split = []
+
+    model_tables[model] = KNTable.model(model, samples, **kwargs)
+    data = model_tables[model]
+
+    for sample in data:
+        mag = sample['mag']
+        t = sample['t']
+        l = len(mag[0])
+
+        mej = sample['mej'] * np.ones(l)
+        phi = sample['phi'] * np.ones(l)
+        theta = sample['theta'] * np.ones(l)
+        id_label = sample['sample_id'] * np.ones(l)
+
+        lightcurve_data = {'t': t, 'u mag': mag[0],
+                           'g mag': mag[1], 'r mag': mag[2],
+                           'i mag': mag[3], 'z mag': mag[4],
+                           'y mag': mag[5], 'J mag': mag[6],
+                           'H mag': mag[7], 'K mag': mag[8],
+                           'mej': mej, 'theta': theta,
+                           'phi': phi, 'id': id_label}
+        print(lightcurve_data['r mag'])
+        
+        # may need to be updated
+        if save_pkl:
+            sample_name = f'./lightcurves_parallel/phi45_updated/{Type}/lc_{Type}_mej_{mej[0]}_theta_{theta[0]}_phi_{phi[0]}_ID_{id_label[0]}.pickle'
+            with open(sample_name, 'wb') as filename:
+                pickle.dump(lightcurve_data,filename, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return lightcurve_data
+
