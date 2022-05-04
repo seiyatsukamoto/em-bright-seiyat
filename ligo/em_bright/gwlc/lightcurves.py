@@ -45,7 +45,8 @@ def initial_mass_draws(dist, mass_draws):
 
 def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, EOS_idx=None):
     '''
-    Pick EOS and calculate ejecta quantities
+    Pick EOS and calculate ejecta quantities, including total mass ejecta, dyn and wind ejecta,
+    velocity of ejecta, compactness, tidal deformability 
 
     Parameters
     ----------

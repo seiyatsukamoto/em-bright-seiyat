@@ -75,8 +75,6 @@ def test_ejecta_to_lc(samples, result):
         mags = [np.ones((9,500))]
         t = [np.ones(500)]
         #mej theta sample_id phi  tini tmax  dt vmin  th  ph  kappa      eps      alp eth flgbct beta kappa_r slope_r theta_r  Ye n_coeff  gptype mej10 t [500] lbol [500] mag [9,500]
-        #data = np.vstack((t, mags)).T
-        #mock_KNTable.return_value = KNTable((data), names=('t', 'mag'))
         mock_KNTable.return_value = KNTable((t,mags), names=('t', 'mag'))
         lightcurve_data = lightcurves.ejecta_to_lc(samples)
         # check if all 9 bands are present
