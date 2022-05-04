@@ -230,4 +230,16 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
     assert (list(wind_mej[3:5]) == result[:, 1]).all
     assert (list(dyn_mej[3:5]) == result[:, 0]).all
 
-# test_run_EOS('gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10)
+@pytest.mark.parametrize(
+    'samples, result',
+    [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
+)
+def test_ejecta_to_lc(samples, result):
+    with patch('gwemlightcurves.KNModels.KNTable.model') as mock_KNTable:
+        mags = [np.ones((9,500))]
+        t = [np.ones(500)]
+        #mej theta sample_id phi  tini tmax  dt vmin  th  ph  kappa      eps      alp eth flgbct beta kappa_r slope_r theta_r  Ye n_coeff  gptype mej10 t [500] lbol [500] mag [9,500]
+        mock_KNTable.return_value = KNTable((t,mags), names=('t', 'mag'))
+        lightcurve_data = lightcurves.ejecta_to_lc(samples)
+        # check if all 9 bands are present
+        assert lightcurve_data['mag'].shape == (1,9,500)
