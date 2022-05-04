@@ -22,8 +22,8 @@ scikit-learn = "==1.1.3"  #  model trained with 1.1.3. see :https://scikit-learn
 astropy = ">=5.1"
 pandas = "^1.0"
 lalsuite = "^7.0"
-h5py = ">=3.7.0"
 htcondor = ">=9.0.6"
+h5py = ">=2.10.0"
 gwemlightcurves = "^0.0.5"
 
 

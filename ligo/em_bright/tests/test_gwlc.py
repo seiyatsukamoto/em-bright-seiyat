@@ -252,6 +252,9 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
     assert (list(dyn_mej[3:5]) == result[:, 0]).all
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1dc2c54 (Resolving additional issues)
 @pytest.mark.parametrize(
     'samples, result',
     [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
@@ -265,6 +268,7 @@ def test_ejecta_to_lc(samples, result):
         lightcurve_data = lightcurves.ejecta_to_lc(samples)
         # check if all 9 bands are present
         assert lightcurve_data['mag'].shape == (1,9,500)
+<<<<<<< HEAD
 def test_lightcurve_predictions(m1, m2, theta):
     # check that has_Remnant is working both for a mass
     # distribution and when passing specific masses
@@ -277,3 +281,5 @@ def test_lightcurve_predictions(m1, m2, theta):
 =======
 # test_run_EOS('gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10)
 >>>>>>> c4096a0 (working on additions)
+=======
+>>>>>>> 1dc2c54 (Resolving additional issues)
