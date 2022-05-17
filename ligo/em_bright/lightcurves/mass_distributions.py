@@ -2,7 +2,7 @@
 """
 import numpy as np
 import scipy.stats as stats
-from .gwlc_utils import alsing_dist, farrow_dist, zhu_dist
+from .lightcurve_utils import alsing_dist, farrow_dist, zhu_dist
 
 def NSBH_uniform(mass_draws):
     m1 = 3*np.ones(mass_draws)+5*np.random.rand(mass_draws)

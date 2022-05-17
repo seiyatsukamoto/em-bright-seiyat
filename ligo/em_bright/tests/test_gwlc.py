@@ -4,8 +4,8 @@ from pathlib import Path
 from astropy.table import Table
 from unittest.mock import patch
 from gwemlightcurves.KNModels import KNTable
-from ..gwlc import lightcurves
-from ..gwlc.mass_distributions import BNS_alsing, BNS_farrow, NSBH_zhu
+from ..lightcurves import calc_lightcurves
+from ..lightcurves.mass_distributions import BNS_alsing, BNS_farrow, NSBH_zhu
 
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
@@ -29,7 +29,7 @@ zhu_result = [[8.24086231, 9.91239175, 6.84081889],
 def test_initial_mass_draws(dist, result):
     # five initial mass draws for unit test
     mass_draws_test = 3
-    output = lightcurves.initial_mass_draws(dist, mass_draws_test)
+    output = calc_lightcurves.initial_mass_draws(dist, mass_draws_test)
     m1, m2 = output[0], output[1]
     # check component mass values
     assert (m1 == result[0]).all
@@ -60,7 +60,7 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
 
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
-    samples = lightcurves.run_EOS(EOS, m1, m2, thetas, N_EOS=N_draws, EOS_posterior=post, EOS_draws=draws, EOS_idx=idxs)
+    samples = calc_lightcurves.run_EOS(EOS, m1, m2, thetas, N_EOS=N_draws, EOS_posterior=post, EOS_draws=draws, EOS_idx=idxs)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
     # check wind and dyn mej values
     assert (list(wind_mej[3:5]) == result[:, 1]).all
@@ -76,6 +76,6 @@ def test_ejecta_to_lc(samples, result):
         t = [np.ones(500)]
         #mej theta sample_id phi  tini tmax  dt vmin  th  ph  kappa      eps      alp eth flgbct beta kappa_r slope_r theta_r  Ye n_coeff  gptype mej10 t [500] lbol [500] mag [9,500]
         mock_KNTable.return_value = KNTable((t,mags), names=('t', 'mag'))
-        lightcurve_data = lightcurves.ejecta_to_lc(samples)
+        lightcurve_data = calc_lightcurves.ejecta_to_lc(samples)
         # check if all 9 bands are present
         assert lightcurve_data['mag'].shape == (1,9,500)

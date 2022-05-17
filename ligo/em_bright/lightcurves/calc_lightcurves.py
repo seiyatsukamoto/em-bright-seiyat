@@ -77,13 +77,12 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, 
     mchirp = (m1*m2)**(3/5) / (m1+m2)**(1/5)
     eta = m1*m2/((m1+m2)*(m1+m2))
 
-    rel_path = 'em-bright/etc/conf.ini'
-    conf_path = Path(__file__).home() / rel_path
-    #conf_path = Path(__file__).parents[2] / rel_path
+    rel_path = 'etc/conf.ini'
+    conf_path = Path(__file__).parents[3] / rel_path
     config = ConfigParser()
     config.read(conf_path)
-    model = config.get('gwlc_configs','gwlc_Bu2019inc')
-    chi = config.getfloat('gwlc_constants','gwlc_chi')
+    model_dict = eval(config.get('lightcurve_configs', 'Bu2019inc_model'))
+    model, chi = model_dict['model'], model_dict['chi']
 
     data = np.vstack((m1,m2,chi,mchirp,eta,q)).T
     samples = KNTable((data), names = ('m1', 'm2', 'chi_eff', 'mchirp', 'eta', 'q'))
@@ -139,12 +138,12 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, 
         samples['wind_mej'] = wind_mej
 
         # Add draw from a gaussian in the log of ejecta mass with 1-sigma size of 70%
-        erroropt = config.get('gwlc_configs','gwlc_erroropt') 
-        if erroropt == 'log':
+        error = config.get('lightcurve_configs','error')
+        if error == 'log':
             samples['mej'] = np.power(10.,np.random.normal(np.log10(samples['mej']),0.236))
-        elif erroropt == 'lin':
+        elif error == 'lin':
             samples['mej'] = np.random.normal(samples['mej'],0.72*samples['mej'])
-        elif erroropt == 'loggauss':
+        elif error == 'loggauss':
             samples['mej'] = np.power(10.,np.random.normal(np.log10(samples['mej']),0.312))
 
         idx = np.where(samples['mej'] <= 0)[0]
@@ -160,7 +159,7 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, 
         return samples
 
 
-def EOS_samples(samples, thetas, nsamples, EOS_posterior, EOS_draws, EOS_idx, EOS = 'gp'):
+def EOS_samples(samples, thetas, nsamples, EOS_draws):
     '''
     Draws different EOS's for ejecta calculations
 
@@ -187,13 +186,12 @@ def EOS_samples(samples, thetas, nsamples, EOS_posterior, EOS_draws, EOS_idx, EO
         table of ejecta quantities
     '''  
 
-    rel_path = 'em-bright/etc/conf.ini'
-    conf_path = Path(__file__).home() / rel_path
-    #conf_path = Path(__file__).parents[2] / rel_path
+    rel_path = 'etc/conf.ini'
+    conf_path = Path(__file__).parents[3] / rel_path
     config = ConfigParser()
     config.read(conf_path)
-    chi = config.getfloat('gwlc_constants','gwlc_chi')
-    Xlan = config.getfloat('gwlc_constants','gwlc_Xlan')
+    model_dict = eval(config.get('lightcurve_configs', 'Bu2019inc_model'))
+    Xlan, chi = model_dict['Xlan'], model_dict['chi']
 
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
     chi_effs, Xlans, qs, mbnss = [], [], [], []
@@ -201,28 +199,37 @@ def EOS_samples(samples, thetas, nsamples, EOS_posterior, EOS_draws, EOS_idx, EO
     m1s, m2s, dists_mbta = [], [], []
 
     # read Phil + Reed's EOS files
-    idxs = np.array(EOS_posterior["eos"])
-    weights = np.array([np.exp(weight) for weight in EOS_posterior["logweight_total"]])
+    # idxs = np.array(EOS_posterior["eos"])
+    # weights = np.array([np.exp(weight) for weight in EOS_posterior["logweight_total"]])
 
     for ii, row in enumerate(samples):
         m1, m2, chi_eff = row["m1"], row["m2"], row["chi_eff"]
         # Note: fix weights
-        indices = np.random.choice(np.array(EOS_idx), size=nsamples, replace=True)
-        for jj in range(nsamples):
-            if EOS == "gp":
-                #index = gp10_idx[jj]
-                index = indices[jj] 
+        # indices = np.random.choice(np.array(EOS_idx), size=nsamples, replace=True)
+        for index in range(nsamples):
+            #index = gp10_idx[jj]
+            #index = jj 
+            lambda1, lambda2 = -1, -1
+            mbns = -1
+            #data_out = EOS_draws[index]
+            # samples lambda's from Phil + Reed's files
+            while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
+                phasetr = 0
+                data_out = EOS_draws[index] 
+                marray, larray = data_out["M"], data_out["Lambda"]
+                f = interp.interp1d(marray, larray, fill_value=0, bounds_error=False)
+                if float(f(m1)) > lambda1: lambda1 = f(m1) # pick lambda from least compact stable branch
+                if float(f(m2)) > lambda2: lambda2 = f(m2)
+                if np.max(marray) > mbns: mbns = np.max(marray) # get global maximum mass
+
+                phasetr += 1 # check all stable branches
+                # eospath = "/home/philippe.landry/nseos/eos/gp/mrgagn/DRAWmod1000-%06d/MACROdraw-%06d/MACROdraw-%06d-%d.csv" % (idxs[index]/1000, idxs[index], idxs[index], phasetr)
+                #eospath = "/home/philippe.landry/nseos/eos/gp/mrgagn/DRAWmod1000-%06d/MACROdraw-%06d/MACROdraw-%06d-%d.csv" % (idxs[index]/1000, idxs[index], idxs[index], phasetr)
+
+            if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
+                index = int(np.random.choice(np.arange(0,len(idxs)), size=1,replace=True,p=weights/np.sum(weights))) # pick a different EOS if it returns negative Lambda or Mmax
                 lambda1, lambda2 = -1, -1
                 mbns = -1
-                # samples lambda's from Phil + Reed's files
-                while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
-                    phasetr = 0
-                    data_out = EOS_draws[index] 
-                    marray, larray = data_out["M"], data_out["Lambda"]
-                    f = interp.interp1d(marray, larray, fill_value=0, bounds_error=False)
-                    if float(f(m1)) > lambda1: lambda1 = f(m1) # pick lambda from least compact stable branch
-                    if float(f(m2)) > lambda2: lambda2 = f(m2)
-                    if np.max(marray) > mbns: mbns = np.max(marray) # get global maximum mass
 
             m1s.append(m1)
             m2s.append(m2)
@@ -261,28 +268,14 @@ def ejecta_to_lc(samples, save_pkl = False):
     phis = 45 * np.ones(num_samples)
     samples['phi'] = phis
 
-    rel_path = 'em-bright/etc/conf.ini'
-    conf_path = Path(__file__).home() / rel_path
-    #conf_path = Path(__file__).parents[2] / rel_path
+    rel_path = 'etc/conf.ini'
+    conf_path = Path(__file__).parents[3] / rel_path
     config = ConfigParser()
     config.read(conf_path)
 
-    samples['tini'] = config.getfloat('gwlc_constants','gwlc_tini')
-    samples['tmax'] = config.getfloat('gwlc_constants','gwlc_tmax')
-    samples['dt'] = config.getfloat('gwlc_constants','gwlc_dt')
-    samples['vmin'] = config.getfloat('gwlc_constants','gwlc_vmin')
-    samples['th'] = config.getfloat('gwlc_constants','gwlc_th')
-    samples['ph'] = config.getfloat('gwlc_constants','gwlc_ph')
-    samples['kappa'] = config.getfloat('gwlc_constants','gwlc_kappa')
-    samples['eps'] = config.getfloat('gwlc_constants','gwlc_eps')
-    samples['alp'] = config.getfloat('gwlc_constants','gwlc_alp')
-    samples['eth'] = config.getfloat('gwlc_constants','gwlc_eth')
-    samples['flgbct'] = config.getfloat('gwlc_constants','gwlc_flgbct')
-    samples['beta'] = config.getfloat('gwlc_constants','gwlc_beta')
-    samples['kappa_r'] = config.getfloat('gwlc_constants','gwlc_kappa_r')
-    samples['slope_r'] = config.getfloat('gwlc_constants','gwlc_slope_r')
-    samples['theta_r'] = config.getfloat('gwlc_constants','gwlc_theta_r')
-    samples['Ye'] = config.getfloat('gwlc_constants','gwlc_Ye')
+    # intitial time, final time, and timestep for lightcurve calculation
+    model_dict = eval(config.get('lightcurve_configs', 'Bu2019inc_model'))
+    samples['tini'], samples['tmax'], samples['dt'] = model_dict['tini'], model_dict['tmax'], model_dict['dt']
 
     rel_path = 'svdmodels'
     ModelPath = Path(__file__).parents[0] / rel_path
@@ -291,7 +284,8 @@ def ejecta_to_lc(samples, save_pkl = False):
     kwargs["doAB"] = True
     kwargs["doSpec"] = False
 
-    model = config.get('gwlc_configs','gwlc_Bu2019inc')
+    #model = config.get('gwlc_configs','gwlc_Bu2019inc')
+    model = model_dict['model']
     model_tables = {}
 
     sample_split = []
