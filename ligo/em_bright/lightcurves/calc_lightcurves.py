@@ -43,15 +43,13 @@ def initial_mass_draws(dist, mass_draws):
     return m1, m2, merger_type
 
 
-def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, EOS_idx=None):
+def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
     '''
     Pick EOS and calculate ejecta quantities, including total mass ejecta, dyn and wind ejecta,
     velocity of ejecta, compactness, tidal deformability 
 
     Parameters
     ----------
-    EOS: str
-        equation of state
     m1: float
         component mass 1
     m2: float
@@ -60,12 +58,8 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, 
         array of theta draws
     N_EOS: int
         number of EOS draws
-    EOS_posterior: str
-        filename of posterior samples
     EOS_draws: str
         filenames of EOS draws 
-    EOS_idx: str
-        indices of EOS draws
 
     Returns
     -------
@@ -86,7 +80,7 @@ def run_EOS(EOS, m1, m2, thetas, N_EOS=100, EOS_posterior=None, EOS_draws=None, 
 
     data = np.vstack((m1,m2,chi,mchirp,eta,q)).T
     samples = KNTable((data), names = ('m1', 'm2', 'chi_eff', 'mchirp', 'eta', 'q'))
-    samples = EOS_samples(samples, thetas, N_EOS, EOS_posterior, EOS_draws, EOS_idx)
+    samples = EOS_samples(samples, thetas, N_EOS, EOS_draws)
 
     samples = samples.calc_tidal_lambda(remove_negative_lambda=True)
 
@@ -175,10 +169,6 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
         filename of posterior samples
     EOS_draws: str
         filenames of EOS draws
-    EOS_idx: str
-        indices of EOS draws
-    EOS: str
-        EOS of state used 
 
     Returns
     -------
@@ -199,19 +189,13 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     m1s, m2s, dists_mbta = [], [], []
 
     # read Phil + Reed's EOS files
-    # idxs = np.array(EOS_posterior["eos"])
-    # weights = np.array([np.exp(weight) for weight in EOS_posterior["logweight_total"]])
-
     for ii, row in enumerate(samples):
         m1, m2, chi_eff = row["m1"], row["m2"], row["chi_eff"]
-        # Note: fix weights
-        # indices = np.random.choice(np.array(EOS_idx), size=nsamples, replace=True)
-        for index in range(nsamples):
-            #index = gp10_idx[jj]
-            #index = jj 
+        indices = np.random.choice(len(EOS_draws), size=nsamples, replace=True)
+        
+        for index in indices:
             lambda1, lambda2 = -1, -1
             mbns = -1
-            #data_out = EOS_draws[index]
             # samples lambda's from Phil + Reed's files
             while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
                 phasetr = 0
@@ -223,8 +207,6 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
                 if np.max(marray) > mbns: mbns = np.max(marray) # get global maximum mass
 
                 phasetr += 1 # check all stable branches
-                # eospath = "/home/philippe.landry/nseos/eos/gp/mrgagn/DRAWmod1000-%06d/MACROdraw-%06d/MACROdraw-%06d-%d.csv" % (idxs[index]/1000, idxs[index], idxs[index], phasetr)
-                #eospath = "/home/philippe.landry/nseos/eos/gp/mrgagn/DRAWmod1000-%06d/MACROdraw-%06d/MACROdraw-%06d-%d.csv" % (idxs[index]/1000, idxs[index], idxs[index], phasetr)
 
             if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
                 index = int(np.random.choice(np.arange(0,len(idxs)), size=1,replace=True,p=weights/np.sum(weights))) # pick a different EOS if it returns negative Lambda or Mmax
@@ -279,12 +261,10 @@ def ejecta_to_lc(samples, save_pkl = False):
 
     rel_path = 'svdmodels'
     ModelPath = Path(__file__).parents[0] / rel_path
-    #ModelPath = "/home/cosmin.stachie/gwemlightcurves/output/svdmodels"
     kwargs = {'SaveModel':False,'LoadModel':True,'ModelPath':ModelPath}
     kwargs["doAB"] = True
     kwargs["doSpec"] = False
 
-    #model = config.get('gwlc_configs','gwlc_Bu2019inc')
     model = model_dict['model']
     model_tables = {}
 

@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import h5py
 from pathlib import Path
 from astropy.table import Table
 from unittest.mock import patch
@@ -18,7 +19,6 @@ far_result = [[1.75185058, 2.44593256, 1.99912136],
 zhu_result = [[8.24086231, 9.91239175, 6.84081889],
               [1.33484312, 1.3357914, 1.32818417]]
 
-
 @pytest.mark.parametrize(
     'dist, result',
     [[BNS_alsing, als_result],
@@ -27,50 +27,54 @@ zhu_result = [[8.24086231, 9.91239175, 6.84081889],
      ]
 )
 def test_initial_mass_draws(dist, result):
-    # five initial mass draws for unit test
+    # three initial mass draws for unit test
     mass_draws_test = 3
     output = calc_lightcurves.initial_mass_draws(dist, mass_draws_test)
     m1, m2 = output[0], output[1]
+    # check component mass values exist
+    assert(len(m1) > 0)
+    assert(len(m2) > 0)
     # check component mass values
-    assert (m1 == result[0]).all
-    assert (m2 == result[1]).all
+    for m, r in zip(m1, result[0]):
+        assert(np.abs(m - r) < 1e-6)
+    for m, r in zip(m2, result[1]):
+        assert(np.abs(m - r) < 1e-6)
 
+# mej results generated from samples of 10 EOS's for unit test
+wind_result = [0.00015, 0.00015, 0.00015, 0.00015, 0.01704984942589736,
+               0.00015, 0.00015, 0.00015, 0.0007670940412947962, 0.00015]
 
-result_gp10 = np.array([[0.022264876109183446, 0.024506102696707492],
-                        [0.0018540989881778943, 0.0006251326630963076]])
-
+dyn_result = [0.00359207322927068, 0.00359207322927068, 0.00474938064347107, 0.004139254128378871, 0.002229370192200336,
+              0.0037482586921199225, 0.0037482586921199225, 0.004139254128378871, 0.002969051216059871, 0.00474938064347107]
 
 @pytest.mark.parametrize(
-    'EOS, m1, m2, thetas, result',
-    [['gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10]]
+    'm1, m2, thetas, wind_result, dyn_result',
+    [[np.array([1.5]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]]
 )
-def test_run_EOS(EOS, m1, m2, thetas, result):
-    post_path = 'data/eos_post_PSRs+GW170817+J0030.csv'
-    with open(Path(__file__).parents[0] / post_path, 'rb') as f:
-        post = np.genfromtxt(f, names=True, delimiter=",")
-    # Note weights removed, files will be used from Zenodo outside of tests
-    idxs = ['137', '138', '421', '422', '423',
-            '424', '425', '426', '427', '428']
-
-    draws = {}
-    for idx in idxs:
-        EOS_draw_path = f'data/MACROdraw-1151{idx}-0.csv'
-        with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
-            draws[f'{idx}'] = np.genfromtxt(f, names=True, delimiter=",")
-
+def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
+    # draw from subset of EOS's for unit test
+    EOS_draw_path = 'data/10_EOS_unit_test.h5'
+    with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
+        dset = h5py.File(f, 'r')
+        draws = np.array(dset['EOS'])
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
-    samples = calc_lightcurves.run_EOS(EOS, m1, m2, thetas, N_EOS=N_draws, EOS_posterior=post, EOS_draws=draws, EOS_idx=idxs)
+    samples = calc_lightcurves.run_EOS(m1, m2, thetas, N_EOS=N_draws, EOS_draws=draws)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
+    # check wind and dyn mej values exist
+    assert(len(wind_mej) > 0)
+    assert(len(dyn_mej) > 0)
     # check wind and dyn mej values
-    assert (list(wind_mej[3:5]) == result[:, 1]).all
-    assert (list(dyn_mej[3:5]) == result[:, 0]).all
+    for m, r in zip(wind_mej, wind_result):
+        assert(np.abs(m - r) < 1e-6)
+    for m, r in zip(dyn_mej, dyn_result):
+        assert(np.abs(m - r) < 1e-6)
 
 @pytest.mark.parametrize(
-    'samples, result',
-    [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
+    'samples',
+    [Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id'))]
 )
-def test_ejecta_to_lc(samples, result):
+def test_ejecta_to_lc(samples):
     with patch('gwemlightcurves.KNModels.KNTable.model') as mock_KNTable:
         mags = [np.ones((9,500))]
         t = [np.ones(500)]
