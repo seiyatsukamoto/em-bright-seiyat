@@ -259,11 +259,10 @@ def ejecta_to_lc(samples, save_pkl = False):
     model_dict = eval(config.get('lightcurve_configs', 'Bu2019inc_model'))
     samples['tini'], samples['tmax'], samples['dt'] = model_dict['tini'], model_dict['tmax'], model_dict['dt']
 
-    rel_path = 'svdmodels'
-    ModelPath = Path(__file__).parents[0] / rel_path
-    kwargs = {'SaveModel':False,'LoadModel':True,'ModelPath':ModelPath}
-    kwargs["doAB"] = True
-    kwargs["doSpec"] = False
+    kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
+    svd_path = 'svdmodels'
+    model_path = Path(__file__).parents[0] / svd_path
+    kwargs['ModelPath'] = model_path
 
     model = model_dict['model']
     model_tables = {}
