@@ -89,68 +89,80 @@ def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
 
     # Calc baryonic mass 
     samples = samples.calc_baryonic_mass(EOS=None, TOV=None, fit=True)
+    samples['merger_type'] = ''
 
-    #----------------------------------------------------------------------------------
-    if (not 'mej' in samples.colnames) and (not 'vej' in samples.colnames):
-        #1 is BNS, 2 is NSBH, 3 is BBH    
-        idx1 = np.where((samples['m1'] <= samples['mbns']) & (samples['m2'] <= samples['mbns']))[0]
-        idx2 = np.where((samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns']))[0]
-        idx3 = np.where((samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns']))[0]
+    #1 is BNS, 2 is NSBH, 3 is BBH    
+    idx1 = np.where((samples['m1'] <= samples['mbns']) & (samples['m2'] <= samples['mbns']))[0]
+    idx2 = np.where((samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns']))[0]
+    idx3 = np.where((samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns']))[0]
 
-        mej, vej = np.zeros(samples['m1'].shape), np.zeros(samples['m1'].shape)
-        wind_mej, dyn_mej = np.zeros(samples['m1'].shape), np.zeros(samples['m1'].shape)   
+    # BNS
+    samples['merger_type'][idx1] = 1
+    # NSBH
+    samples['merger_type'][idx2] = 2
+    # BBH
+    samples['merger_type'][idx3] = 3
 
-        # calc the mass of ejecta
-        mej1, dyn_mej1, wind_mej1 = PaDi2019.calc_meje(samples['m1'], samples['c1'], samples['m2'], samples['c2'], split_mej=True)
-        # calc the velocity of ejecta
-        vej1 = PaDi2019.calc_vej(samples['m1'],samples['c1'],samples['m2'],samples['c2'])
-        samples['mchirp'], samples['eta'], samples['q'] = lightcurve_utils.ms2mc(samples['m1'], samples['m2'])
+    mej, vej = np.zeros(samples['m1'].shape), np.zeros(samples['m1'].shape)
+    wind_mej, dyn_mej = np.zeros(samples['m1'].shape), np.zeros(samples['m1'].shape)   
 
-        # calc the mass of ejecta
-        mej2, dyn_mej2, wind_mej2 = KrFo2019.calc_meje(samples['q'],samples['chi_eff'],samples['c2'], samples['m2'], split_mej=True)
-        # calc the velocity of ejecta
-        vej2 = KrFo2019.calc_vave(samples['q'])
+    # calc the mass of ejecta
+    mej1, dyn_mej1, wind_mej1 = PaDi2019.calc_meje(samples['m1'], samples['c1'], samples['m2'], samples['c2'], split_mej=True)
+    # calc the velocity of ejecta
+    vej1 = PaDi2019.calc_vej(samples['m1'],samples['c1'],samples['m2'],samples['c2'])
+    samples['mchirp'], samples['eta'], samples['q'] = lightcurve_utils.ms2mc(samples['m1'], samples['m2'])
 
-        # calc the mass of ejecta
-        mej3 = np.zeros(samples['m1'].shape)
-        dyn_mej3 = np.zeros(samples['m1'].shape)
-        wind_mej3 = np.zeros(samples['m1'].shape)
-        # calc the velocity of ejecta
-        vej3 = np.zeros(samples['m1'].shape) + 0.2
+    # calc the mass of ejecta
+    mej2, dyn_mej2, wind_mej2 = KrFo2019.calc_meje(samples['q'],samples['chi_eff'],samples['c2'], samples['m2'], split_mej=True)
+    # calc the velocity of ejecta
+    vej2 = KrFo2019.calc_vave(samples['q'])
 
-        mej[idx1], vej[idx1] = mej1[idx1], vej1[idx1]
-        mej[idx2], vej[idx2] = mej2[idx2], vej2[idx2]
-        mej[idx3], vej[idx3] = mej3[idx3], vej3[idx3]
+    # calc the mass of ejecta
+    mej3 = np.zeros(samples['m1'].shape)
+    dyn_mej3 = np.zeros(samples['m1'].shape)
+    wind_mej3 = np.zeros(samples['m1'].shape)
+    # calc the velocity of ejecta
+    vej3 = np.zeros(samples['m1'].shape) + 0.2
 
-        wind_mej[idx1], dyn_mej[idx1] = wind_mej1[idx1], dyn_mej1[idx1]
-        wind_mej[idx2], dyn_mej[idx2] = wind_mej2[idx2], dyn_mej2[idx2]
-        wind_mej[idx3], dyn_mej[idx3] = wind_mej3[idx3], dyn_mej3[idx3]
+    mej[idx1], vej[idx1] = mej1[idx1], vej1[idx1]
+    mej[idx2], vej[idx2] = mej2[idx2], vej2[idx2]
+    mej[idx3], vej[idx3] = mej3[idx3], vej3[idx3]
 
-        samples['mej'] = mej
-        samples['vej'] = vej
-        samples['dyn_mej'] = dyn_mej
-        samples['wind_mej'] = wind_mej
+    wind_mej[idx1], dyn_mej[idx1] = wind_mej1[idx1], dyn_mej1[idx1]
+    wind_mej[idx2], dyn_mej[idx2] = wind_mej2[idx2], dyn_mej2[idx2]
+    wind_mej[idx3], dyn_mej[idx3] = wind_mej3[idx3], dyn_mej3[idx3]
 
-        # Add draw from a gaussian in the log of ejecta mass with 1-sigma size of 70%
-        error = config.get('lightcurve_configs','error')
-        if error == 'log':
-            samples['mej'] = np.power(10.,np.random.normal(np.log10(samples['mej']),0.236))
-        elif error == 'lin':
-            samples['mej'] = np.random.normal(samples['mej'],0.72*samples['mej'])
-        elif error == 'loggauss':
-            samples['mej'] = np.power(10.,np.random.normal(np.log10(samples['mej']),0.312))
+    samples['mej'] = mej
+    samples['vej'] = vej
+    samples['dyn_mej'] = dyn_mej
+    samples['wind_mej'] = wind_mej
 
-        idx = np.where(samples['mej'] <= 0)[0]
+    # Add draw from a gaussian in the log of ejecta mass with 1-sigma size of 70%
+    error_dict = eval(config.get('lightcurve_configs','error_dict'))
+    error = error_dict['error']
+    if error == 'log':
+        samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), error_dict['log_val']))
+    elif error == 'lin':
+        samples['mej'] = np.random.normal(samples['mej'], error_dict['lin_val']*samples['mej'])
+    elif error == 'loggauss':
+        samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), error_dict['loggauss_val']))
+
+    # TEMPORARY, remove once entire EOS file is implemented
+    print('min mej:')
+    print(np.min(samples['mej']))
+    if np.min(samples['mej']) < 0:
+        print('---------------mej less than zero!!!-----------------')
+    idx = np.where(samples['mej'] <= 0)[0]
+    samples['mej'][idx] = 1e-11
+
+    if (model == "Bu2019inc"):
+        idx = np.where(samples['mej'] <= 1e-6)[0]
+        samples['mej'][idx] = 1e-11
+    elif (model == "Ka2017"):
+        idx = np.where(samples['mej'] <= 1e-3)[0]
         samples['mej'][idx] = 1e-11
 
-        if (model == "Bu2019inc"):
-                idx = np.where(samples['mej'] <= 1e-6)[0]
-                samples['mej'][idx] = 1e-11
-        elif (model == "Ka2017"):
-                idx = np.where(samples['mej'] <= 1e-3)[0]
-                samples['mej'][idx] = 1e-11
-
-        return samples
+    return samples
 
 
 def EOS_samples(samples, thetas, nsamples, EOS_draws):
@@ -184,14 +196,12 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     Xlan, chi = model_dict['Xlan'], model_dict['chi']
 
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
-    chi_effs, Xlans, qs, mbnss = [], [], [], []
-
-    m1s, m2s, dists_mbta = [], [], []
+    chi_effs, Xlans, mbnss = [], [], []
 
     # read Phil + Reed's EOS files
     for ii, row in enumerate(samples):
         m1, m2, chi_eff = row["m1"], row["m2"], row["chi_eff"]
-        indices = np.random.choice(len(EOS_draws), size=nsamples, replace=True)
+        indices = np.random.choice(len(EOS_draws), size=nsamples)
         
         for index in indices:
             lambda1, lambda2 = -1, -1
@@ -208,10 +218,10 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
 
                 phasetr += 1 # check all stable branches
 
-            if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
-                index = int(np.random.choice(np.arange(0,len(idxs)), size=1,replace=True,p=weights/np.sum(weights))) # pick a different EOS if it returns negative Lambda or Mmax
-                lambda1, lambda2 = -1, -1
-                mbns = -1
+                if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
+                    index = int(np.random.choice(len(EOS_draws), size=1)) # pick a different EOS if it returns negative Lambda or Mmax
+                    lambda1, lambda2 = -1, -1
+                    mbns = -1
 
             m1s.append(m1)
             m2s.append(m2)
@@ -224,6 +234,7 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     thetas[thetas > 90] = 180 - thetas[thetas > 90]
     Xlans = np.ones(np.array(m1s).shape) * Xlan
 
+    # create a new table including each EOS draw for each component mass pair, and new quantities
     data = np.vstack((m1s, m2s, lambda1s, lambda2s, Xlans, chi_effs, thetas, mbnss)).T
     samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'Xlan', 'chi_eff', 'theta', 'mbns'))
 
@@ -265,9 +276,6 @@ def ejecta_to_lc(samples, save_pkl = False):
     kwargs['ModelPath'] = model_path
 
     model = model_dict['model']
-    model_tables = {}
-
-    sample_split = []
 
     lightcurve_data = KNTable.model(model, samples, **kwargs)
 

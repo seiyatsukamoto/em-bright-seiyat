@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import h5py
+from configparser import ConfigParser
 from pathlib import Path
 from astropy.table import Table
 from unittest.mock import patch
@@ -41,15 +42,15 @@ def test_initial_mass_draws(dist, result):
         assert(np.abs(m - r) < 1e-6)
 
 # mej results generated from samples of 10 EOS's for unit test
-wind_result = [0.00015, 0.00015, 0.00015, 0.00015, 0.01704984942589736,
-               0.00015, 0.00015, 0.00015, 0.0007670940412947962, 0.00015]
 
-dyn_result = [0.00359207322927068, 0.00359207322927068, 0.00474938064347107, 0.004139254128378871, 0.002229370192200336,
-              0.0037482586921199225, 0.0037482586921199225, 0.004139254128378871, 0.002969051216059871, 0.00474938064347107]
+wind_result = [0.0, 0.0, 0.0, 0.00015, 0.00015, 0.026139776881316672,
+               0.026139776881316672, 0.00015, 0.00015, 0.0]
 
+dyn_result = [0.0, 0.0, 0.0, 0.03861573337032299, 0.019762168859786912, 0.04453325371287244,
+              0.04453325371287244, 0.03861573337032299, 0.02699589949797451, 0.0]
 @pytest.mark.parametrize(
     'm1, m2, thetas, wind_result, dyn_result',
-    [[np.array([1.5]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]]
+    [[np.array([2.2]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]]
 )
 def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
     # draw from subset of EOS's for unit test
@@ -70,16 +71,28 @@ def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
     for m, r in zip(dyn_mej, dyn_result):
         assert(np.abs(m - r) < 1e-6)
 
+    # check that merger type matches NS/BH definition from EOS
+    for sample in samples:
+        if sample['merger_type'] == 1:
+            assert (samples['m1'] <= samples['mbns']) & (samples['m2'] <= samples['mbns'])
+        elif sample['merger_type'] == 2:
+            assert (samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns'])
+        elif sample['merger_type'] == 3:
+            assert (samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns'])
+
 @pytest.mark.parametrize(
     'samples',
     [Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id'))]
 )
 def test_ejecta_to_lc(samples):
+    mags = [np.ones((9,500))]
+    t = [np.ones(500)]
+    mock_mags = KNTable((t,mags), names=('t', 'mag'))
     with patch('gwemlightcurves.KNModels.KNTable.model') as mock_KNTable:
-        mags = [np.ones((9,500))]
-        t = [np.ones(500)]
-        #mej theta sample_id phi  tini tmax  dt vmin  th  ph  kappa      eps      alp eth flgbct beta kappa_r slope_r theta_r  Ye n_coeff  gptype mej10 t [500] lbol [500] mag [9,500]
-        mock_KNTable.return_value = KNTable((t,mags), names=('t', 'mag'))
+        mock_KNTable.return_value = mock_mags
         lightcurve_data = calc_lightcurves.ejecta_to_lc(samples)
-        # check if all 9 bands are present
-        assert lightcurve_data['mag'].shape == (1,9,500)
+        # check that the mock object was called once, and has the right value
+        mock_KNTable.assert_called_once()
+        assert mock_KNTable.return_value is mock_mags
+    # check if all 9 bands are present
+    assert lightcurve_data['mag'].shape == (1,9,500)
