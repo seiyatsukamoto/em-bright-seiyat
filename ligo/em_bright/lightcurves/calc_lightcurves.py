@@ -202,7 +202,8 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     for ii, row in enumerate(samples):
         m1, m2, chi_eff = row["m1"], row["m2"], row["chi_eff"]
         indices = np.random.choice(len(EOS_draws), size=nsamples)
-        
+        print('idx: '+str(indices))    
+    
         for index in indices:
             lambda1, lambda2 = -1, -1
             mbns = -1

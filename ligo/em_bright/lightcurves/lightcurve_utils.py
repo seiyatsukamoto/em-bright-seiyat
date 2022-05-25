@@ -1,7 +1,17 @@
 import numpy as np
+import h5py
+from pathlib import Path
 from scipy.stats import rv_continuous
 from scipy.integrate import quad
 
+def load_EOS_posterior():
+    #load EOS posterior draws (https://zenodo.org/record/6502467#.Yoa2EKjMI2z)
+    rel_path = 'data/LCEHL_EOS_posterior_samples_PSR+GW_slice.h5'
+    EOS_path = Path(__file__).parents[1] / rel_path
+    with h5py.File(EOS_path, 'r') as f:
+        #dset = h5py.File(f, 'r')
+        draws = np.array(f['EOS'])
+    return draws 
 
 def alsing_pdf(m):
     # From Alsing 2018 (arxiv 1709.07889)
