@@ -282,7 +282,9 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     date_time = time.strftime('%Y%m%d-%H%M%S')
 
     filename = f'etc/metadata/EOS/EOS_meta_{date_time}.txt'
-    file_path = Path(__file__).parents[3] / filename
+    folder_path = Path(__file__).parents[3]
+    file_path = folder_path / filename
+    Path(folder_path / 'etc/metadata/EOS').mkdir(parents=True, exist_ok=True)
     with open(file_path, 'w') as f:
         f.write(str(EOS_metadata))
 
@@ -335,7 +337,11 @@ def ejecta_to_lc(samples, save_pkl = False):
     date_time = time.strftime('%Y%m%d-%H%M%S')
 
     filename = f'etc/metadata/LC/LC_meta_{date_time}.txt'
-    file_path = Path(__file__).parents[3] / filename
+    folder_path = Path(__file__).parents[3]
+    file_path = folder_path / filename
+
+    Path(folder_path / 'etc/metadata/LC').mkdir(parents=True, exist_ok=True)
+
     with open(file_path, 'w') as f:
         f.write(str(LC_metadata))
 
