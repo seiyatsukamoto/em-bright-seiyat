@@ -10,6 +10,8 @@ from ..lightcurves import calc_lightcurves
 from ..lightcurves.mass_distributions import BNS_alsing, BNS_farrow, NSBH_zhu
 from ..lightcurves.lightcurve_utils import load_EOS_posterior
 
+import time
+
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
 als_result = [[1.53205977, 1.76327504, 1.68504319],
@@ -55,6 +57,7 @@ dyn_result = [0.0, 0.0, 0.0, 0.03861573337032299, 0.019762168859786912, 0.044533
     [[np.array([2.2]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]]
 )
 def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
+    start = time.time()
     # draw from subset of EOS's for unit test
     EOS_draw_path = 'data/10_EOS_unit_test.h5'
     with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
@@ -81,10 +84,23 @@ def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
             assert (samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns'])
         elif sample['merger_type'] == 3:
             assert (samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns'])
+    end = time.time()
+    print('Time with cut EoS file:')
+    print(end-start)
+
+
+wind_result = [0.00015, 0.0019252500601933248, 0.0, 0.00015, 0.00015,
+               0.026360812576263545, 0.0, 0.00015, 0.0, 0.0]
+
+dyn_result = [0.02280865206471067, 0.023176761407649658, 0.0, 0.022085650481961882,
+              0.019233860684184288, 0.02692112457226755, 0.0, 0.01472993019193578, 0.0, 0.0]
 
 @pytest.mark.parametrize(
     'm1, m2, thetas, wind_result, dyn_result',
-    [[np.array([2.2]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]]
+    [[np.array([2.1]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result] #,
+     #[np.array([2.1]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result],
+     #[np.array([2.1]), np.array([1.5]), np.ones(10)*45, wind_result, dyn_result]
+]
 )
 def test_run_EOS2(m1, m2, thetas, wind_result, dyn_result):
     # draw from subset of EOS's for unit test
@@ -92,6 +108,7 @@ def test_run_EOS2(m1, m2, thetas, wind_result, dyn_result):
     #with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
     #    dset = h5py.File(f, 'r')
     #    draws = np.array(dset['EOS'])
+    start = time.time()
     draws = load_EOS_posterior() 
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
@@ -100,6 +117,8 @@ def test_run_EOS2(m1, m2, thetas, wind_result, dyn_result):
     # check wind and dyn mej values exist
     assert(len(wind_mej) > 0)
     assert(len(dyn_mej) > 0)
+    print(wind_mej, dyn_mej)
+    print(wind_result, dyn_result)
     # check wind and dyn mej values
     for m, r in zip(wind_mej, wind_result):
         assert(np.abs(m - r) < 1e-6)
@@ -114,6 +133,9 @@ def test_run_EOS2(m1, m2, thetas, wind_result, dyn_result):
             assert (samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns'])
         elif sample['merger_type'] == 3:
             assert (samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns'])
+    end = time.time()
+    print('Time with full EoS file:')
+    print(end-start)
 
 @pytest.mark.parametrize(
     'samples',
