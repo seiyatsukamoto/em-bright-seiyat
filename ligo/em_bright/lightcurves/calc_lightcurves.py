@@ -135,7 +135,7 @@ def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
                                                    samples['c2'],
                                                    samples['m2'],
                                                    split_mej=True)
-    
+
     # calc the velocity of ejecta
     vej2 = KrFo2019.calc_vave(samples['q'])
 
@@ -161,19 +161,14 @@ def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
 
     # Add draw from a gaussian in the log of
     # ejecta mass with 1-sigma size of 70%
-    err_dict = eval(config.get('lightcurve_configs','mej_error_dict'))
+    err_dict = eval(config.get('lightcurve_configs', 'mej_error_dict'))
     error = err_dict['error']
     if error == 'log':
-        samples['mej'] = np.power(10.,
-                                  np.random.normal(np.log10(samples['mej']),
-                                  err_dict['log_val']))
+        samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), err_dict['log_val']))  # noqa:E501
     elif error == 'lin':
-        samples['mej'] = np.random.normal(samples['mej'],
-                                          err_dict['lin_val']*samples['mej'])
+        samples['mej'] = np.random.normal(samples['mej'], err_dict['lin_val']*samples['mej'])  # noqa:E501
     elif error == 'loggauss':
-        samples['mej'] = np.power(10.,
-                                  np.random.normal(np.log10(samples['mej']),
-                                                   err_dict['loggauss_val']))
+        samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), err_dict['loggauss_val']))  # noqa:E501
 
     # TEMPORARY, remove once entire EOS file is implemented
     print('min mej:')
@@ -214,21 +209,18 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     -------
     samples: KNTable object
         table of ejecta quantities
-    '''  
+    '''
 
     rel_path = 'etc/conf.ini'
     conf_path = Path(__file__).parents[3] / rel_path
     config = ConfigParser()
     config.read(conf_path)
-    model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
-    chi = model_dict['chi_eff']
-    
 
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
     chi_effs, mbnss, qs, mchirps, etas = [], [], [], [], []
 
     EOS_metadata = {'fix_seed': config.get('lightcurve_configs', 'fix_seed')}
-    meta_indices = []    
+    meta_indices = []
 
     # read Phil + Reed's EOS files
     for ii, row in enumerate(samples):
@@ -241,20 +233,23 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
             # samples lambda's from Phil + Reed's files
             while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
                 phasetr = 0
-                data_out = EOS_draws[index] 
+                data_out = EOS_draws[index]
                 marray, larray = data_out['M'], data_out['Lambda']
-                f = interp.interp1d(marray, larray, 
+                f = interp.interp1d(marray, larray,
                                     fill_value=0, bounds_error=False)
                 # pick lambda from least compact stable branch
-                if float(f(row['m1'])) > lambda1: lambda1 = f(row['m1'])
-                if float(f(row['m2'])) > lambda2: lambda2 = f(row['m2'])
+                if float(f(row['m1'])) > lambda1:
+                    lambda1 = f(row['m1'])
+                if float(f(row['m2'])) > lambda2:
+                    lambda2 = f(row['m2'])
                 # get global maximum mass
-                if np.max(marray) > mbns: mbns = np.max(marray)
+                if np.max(marray) > mbns:
+                    mbns = np.max(marray)
                 # check all stable branches
                 phasetr += 1
 
                 if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
-                    # pick a different EOS if it returns 
+                    # pick a different EOS if it returns
                     # negative Lambda or Mmax
                     index = int(np.random.choice(len(EOS_draws), size=1))
                     lambda1, lambda2 = -1, -1
@@ -286,13 +281,17 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
 
     thetas[thetas > 90] = 180 - thetas[thetas > 90]
 
-    # create a new table including each EOS draw for each component mass pair, and new quantities
-    data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs, thetas, mbnss, qs, mchirps, etas)).T
-    samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff', 'theta', 'mbns', 'q', 'mchirp', 'eta'))
+    # create a new table including each EOS draw for each
+    # component mass pair, and new quantities
+    data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs,
+                      thetas, mbnss, qs, mchirps, etas)).T
+    samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff',
+                                   'theta', 'mbns', 'q', 'mchirp', 'eta'))
 
     return samples
 
-def ejecta_to_lc(samples, save_pkl = False): #maybe reimplement saving to a pkl? Depends on final low-latency product
+
+def ejecta_to_lc(samples, save_pkl=False):  # reimplement save_pkl?
     '''
     Calculate lightcurves from ejecta quatities
 
@@ -309,6 +308,7 @@ def ejecta_to_lc(samples, save_pkl = False): #maybe reimplement saving to a pkl?
         ejecta quatities and lightcurves for various mag bands
     '''
 
+    # maybe reimplement saving to a pkl? Depends on final low-latency product
     num_samples = len(samples)
     phis = 45 * np.ones(num_samples)
     samples['phi'] = phis
@@ -320,7 +320,9 @@ def ejecta_to_lc(samples, save_pkl = False): #maybe reimplement saving to a pkl?
 
     # intitial time, final time, and timestep for lightcurve calculation
     model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
-    samples['tini'], samples['tmax'], samples['dt'] = model_dict['tini'], model_dict['tmax'], model_dict['dt']
+    samples['tini'] = model_dict['tini']
+    samples['tmax'] = model_dict['tmax']
+    samples['dt'] = model_dict['dt']
 
     kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
     svd_path = 'svdmodels'
