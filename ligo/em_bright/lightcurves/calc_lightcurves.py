@@ -66,18 +66,14 @@ def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
         array of theta draws
     N_EOS: int
         number of EOS draws
-    EOS_draws: str
-        filenames of EOS draws
+    EOS_draws: np.array
+        array of EOS draws
 
     Returns
     -------
     samples: KNTable object
         ejecta quantities
     '''
-
-    q = m2/m1
-    mchirp = (m1*m2)**(3/5) / (m1+m2)**(1/5)
-    eta = m1*m2/((m1+m2)*(m1+m2))
 
     mchirp, eta, q = lightcurve_utils.ms2mc(m1, m2)
 
@@ -296,7 +292,7 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
 
     return samples
 
-def ejecta_to_lc(samples, save_pkl = False):
+def ejecta_to_lc(samples, save_pkl = False): #maybe reimplement saving to a pkl? Depends on final low-latency product
     '''
     Calculate lightcurves from ejecta quatities
 
