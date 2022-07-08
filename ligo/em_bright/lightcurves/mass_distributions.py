@@ -48,6 +48,7 @@ def NSBH_zhu(mass_draws):
 
 
 def NSBH_LRR(mass_draws):
+    # From Living Reviews in Relativity
     ns_astro_mass_dist = stats.norm(1.33, 0.09)
     bh_astro_mass_dist = stats.pareto(b=1.3)
     m1 = bh_astro_mass_dist.rvs(size=mass_draws)
@@ -57,6 +58,7 @@ def NSBH_LRR(mass_draws):
 
 
 def BNS_LRR(mass_draws):
+    # From Living Reviews in Relativity
     ns_astro_mass_dist = stats.norm(1.33, 0.09)
     m1 = ns_astro_mass_dist.rvs(size=mass_draws)
     m2 = ns_astro_mass_dist.rvs(size=mass_draws)

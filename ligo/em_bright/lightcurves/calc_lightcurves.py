@@ -3,11 +3,13 @@ Module containing functions to calculate mass ejecta and lightcurves from
 initial component masses
 """
 import numpy as np
+import astropy
 import time
 from scipy.interpolate import interpolate as interp
 from configparser import ConfigParser
 from pathlib import Path
 
+from ..lightcurves.lightcurve_utils import load_EOS_posterior
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019
@@ -21,6 +23,56 @@ fix_seed = config.get('lightcurve_configs', 'fix_seed')
 if fix_seed:
     np.random.seed(0)
 
+# load posterior
+draws = load_EOS_posterior()
+# time for meta data
+date_time = time.strftime('%Y%m%d-%H%M%S')
+
+
+def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
+                           mass_dist=None, mass_draws=None, N_EOS=50):
+    '''
+    Main function to carry out ejecta quantity and lightcurve
+    predictions. Needs either: m1, m2, and theta OR mass_dist
+
+    Parameters
+    ----------
+    m1s: numpy array
+        more massive component masses in solar masses
+    m2s: numpy array
+        less massive component masses in solar masses
+    thetas: numpy array
+        inclination angles in radians
+    mass_dist: str
+        one of the mass dists found in mass_distributions
+    mass_draws: int
+        number of masses to draw if using mass_dist
+    N_EOS: int
+        number of EOS draws
+
+    Returns
+    -------
+    lightcurve_data: KNTable object
+        ejecta quatities and lightcurves for various mag bands
+    '''
+    # draw masses from dist
+    if mass_dist:
+        m1s, m2s = initial_mass_draws(mass_dist, mass_draws)
+        thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
+        idx_thetas = np.where(thetas > 90.)[0]
+        thetas[idx_thetas] = 180. - thetas[idx_thetas]
+
+    lightcurve_data = KNTable()
+    for i, m1 in enumerate(m1s):
+        samples = run_EOS(m1, m2s[i], thetas[i], N_EOS=N_EOS, EOS_draws=draws)
+        data = ejecta_to_lc(samples)
+        lightcurve_data = astropy.table.vstack([data, lightcurve_data])
+
+    remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
+    has_Remnant = len(remnant)/len(lightcurve_data['mej'])
+
+    return lightcurve_data, has_Remnant
+
 
 def initial_mass_draws(dist, mass_draws):
     '''
@@ -29,18 +81,16 @@ def initial_mass_draws(dist, mass_draws):
     Parameters
     ----------
     dist: str
-        one of the below component mass dists
+        one of the below mass dists found in mass_distributions
     mass_draws: int
         number of component mass pairs to draw
 
     Returns
     -------
     m1: numpy array
-        more massive component mass
+        more massive component mass in solar masses
     m2: numpy array
-        less massive component mass
-    merger_type: str
-        can be BNS, NSBH, or NotSpecified
+        less massive component mass in solar masses
     '''
 
     m1_unsorted, m2_unsorted, merger_type = dist(mass_draws)
@@ -48,10 +98,10 @@ def initial_mass_draws(dist, mass_draws):
     m1 = np.maximum(m1_unsorted, m2_unsorted)
     m2 = np.minimum(m1_unsorted, m2_unsorted)
 
-    return m1, m2, merger_type
+    return m1, m2
 
 
-def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
+def run_EOS(m1, m2, thetas, N_EOS=50, EOS_draws=None):
     '''
     Pick EOS and calculate ejecta quantities, including total mass ejecta,
     dyn and wind ejecta, velocity of ejecta, compactness, tidal deformability
@@ -170,9 +220,6 @@ def run_EOS(m1, m2, thetas, N_EOS=100, EOS_draws=None):
     elif error == 'loggauss':
         samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), err_dict['loggauss_val']))  # noqa:E501
 
-    # TEMPORARY, remove once entire EOS file is implemented
-    print('min mej:')
-    print(np.min(samples['mej']))
     if np.min(samples['mej']) < 0:
         print('---------------mej less than zero!!!-----------------')
     idx = np.where(samples['mej'] <= 0)[0]
@@ -200,8 +247,6 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
         array of theta draws
     nsamples: int
         number of EOS draws
-    EOS_posterior: str
-        filename of posterior samples
     EOS_draws: KNTable object
         EOS draws to be used
 
@@ -218,6 +263,8 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
 
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
     chi_effs, mbnss, qs, mchirps, etas = [], [], [], [], []
+    # duplicate thetas for each EOS draw
+    thetas = thetas*np.ones(nsamples)
 
     EOS_metadata = {'fix_seed': config.get('lightcurve_configs', 'fix_seed')}
     meta_indices = []
@@ -226,7 +273,6 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
     for ii, row in enumerate(samples):
         indices = np.random.choice(len(EOS_draws), size=nsamples)
         meta_indices.append(indices)
-        print('idx: '+str(indices))
         for index in indices:
             lambda1, lambda2 = -1, -1
             mbns = -1
@@ -270,16 +316,13 @@ def EOS_samples(samples, thetas, nsamples, EOS_draws):
 
     mej_err = eval(config.get('lightcurve_configs', 'mej_error_dict'))
     EOS_metadata['mej_err'] = mej_err
-    date_time = time.strftime('%Y%m%d-%H%M%S')
 
-    filename = f'etc/metadata/EOS/EOS_meta_{date_time}.txt'
+    filename = f'etc/metadata/LC_meta_{date_time}.txt'
     folder_path = Path(__file__).parents[3]
     file_path = folder_path / filename
-    Path(folder_path / 'etc/metadata/EOS').mkdir(parents=True, exist_ok=True)
-    with open(file_path, 'w') as f:
-        f.write(str(EOS_metadata))
-
-    thetas[thetas > 90] = 180 - thetas[thetas > 90]
+    Path(folder_path / 'etc/metadata').mkdir(parents=True, exist_ok=True)
+    with open(file_path, 'a') as f:
+        f.write(str(EOS_metadata)+'\n')
 
     # create a new table including each EOS draw for each
     # component mass pair, and new quantities
@@ -304,7 +347,7 @@ def ejecta_to_lc(samples, save_pkl=False):  # reimplement save_pkl?
 
     Returns
     -------
-    lightcurve_data: dictionary
+    lightcurve_data: KNTable object
         ejecta quatities and lightcurves for various mag bands
     '''
 
@@ -332,16 +375,15 @@ def ejecta_to_lc(samples, save_pkl=False):  # reimplement save_pkl?
     model = model_dict['model']
 
     LC_metadata = {'model_conf': model_dict}
-    date_time = time.strftime('%Y%m%d-%H%M%S')
 
-    filename = f'etc/metadata/LC/LC_meta_{date_time}.txt'
+    filename = f'etc/metadata/LC_meta_{date_time}.txt'
     folder_path = Path(__file__).parents[3]
     file_path = folder_path / filename
 
-    Path(folder_path / 'etc/metadata/LC').mkdir(parents=True, exist_ok=True)
+    Path(folder_path / 'etc/metadata').mkdir(parents=True, exist_ok=True)
 
-    with open(file_path, 'w') as f:
-        f.write(str(LC_metadata))
+    with open(file_path, 'a') as f:
+        f.write(str(LC_metadata)+'\n')
 
     lightcurve_data = KNTable.model(model, samples, **kwargs)
 
