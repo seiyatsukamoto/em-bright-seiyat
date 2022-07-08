@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from astropy.table import Table
 from unittest.mock import patch
 from gwemlightcurves.KNModels import KNTable
 from ..lightcurves import calc_lightcurves
@@ -131,7 +130,7 @@ def test_high_mass_wind_check(m1, m2, thetas):
 
 @pytest.mark.parametrize(
     'samples',
-    [Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id'))]
+    [KNTable(([.1], [35], [0]), names=('mej', 'theta', 'sample_id'))]
 )
 def test_ejecta_to_lc(samples):
     mags = [np.ones((9, 500))]
