@@ -127,6 +127,7 @@ def main():
     for exect, arg_sub in exec_arg_assoc.items():
         condor_sub_dict[exect] = htcondor.Submit(
             universe='vanilla',
+            request_disk="1GB",
             executable=exect,
             arguments=arg_sub,
             output='$(executable).stdout',
