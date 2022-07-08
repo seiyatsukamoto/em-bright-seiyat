@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 import numpy as np
-<<<<<<< HEAD
+from astropy.table import Table
 from unittest.mock import patch
 from gwemlightcurves.KNModels import KNTable
 from ..lightcurves import calc_lightcurves
@@ -10,10 +10,7 @@ from ..lightcurves.mass_distributions import BNS_uniform, BNS_LRR
 from ..lightcurves.mass_distributions import NSBH_uniform, NSBH_LRR
 from ..lightcurves.lightcurve_utils import load_eos_posterior
 
-=======
-from ..gwlc import gwlc_functions
-# from mass_grid_gp10_test2 import run_EOS
->>>>>>> c4096a0 (working on additions)
+from ..lightcurves.lightcurve_utils import load_EOS_posterior
 
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
@@ -26,7 +23,6 @@ far_result = [[1.75185058, 2.44593256, 1.99912136],
 zhu_result = [[8.24086231, 9.91239175, 6.84081889],
               [1.33484312, 1.3357914, 1.32818417]]
 
-<<<<<<< HEAD
 BNS_uni_result = [[2.4268996, 2.70593716, 2.18786574],
                   [1.34370059, 1.30106652, 1.98714215]]
 
@@ -199,7 +195,6 @@ def test_lightcurve_predictions(m1, m2, theta, yields_ejecta, percentile_results
     for percentile_type in percentile_types:
         for percentile, result in zip(percentiles[percentile_type], percentile_results[percentile_type]):  # noqa:E501
             assert abs(percentile-result) < 1e-6
-=======
 
 @pytest.mark.parametrize(
     'Type, result',
@@ -214,27 +209,71 @@ def test_initial_mass_draws(Type, result):
     output = gwlc_functions.initial_mass_draws(Type, mass_draws_test)
     m1, m2 = output[0], output[1]
     # check component mass values
->>>>>>> c4096a0 (working on additions)
-    assert (m1 == result[0]).all
-    assert (m2 == result[1]).all
+    for m, r in zip(m1, result[0]):
+        assert(np.abs(m - r) < 1e-6)
+    for m, r in zip(m2, result[1]):
+        assert(np.abs(m - r) < 1e-6)
+
+
+dyn_result = [0.01858454429603665, 0.020577048962047758,
+              0.024680568573388153, 0.024708485066836983,
+              0.01865444152290588, 0.023558982026319016,
+              0.0, 0.01312538012541829, 0.0, 0.0]
+
+wind_result = [0.00015, 0.00015, 0.018125212769565864,
+               0.019958112321618027, 0.00015,
+               0.026042143314813155, 0.001797551492723432,
+               0.00015, 0.0, 0.0]
+>>>>>>> 543f0ca (Additional tests and changes)
 
 result_gp10 = np.array([[0.022264876109183446, 0.024506102696707492],
                         [0.0018540989881778943, 0.0006251326630963076]])
 
 # once full EOS implementaion is finished update np.ones(10)
 @pytest.mark.parametrize(
-    'EOS, m1, m2, thetas, EOS, result',
-    [['gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10]]
+    'm1, m2, thetas, wind_result, dyn_result',
+    [[np.array([2.1]), np.array([1.5]), np.array([45]),
+      wind_result, dyn_result]]
 )
+def test_run_EOS(m1, m2, thetas, wind_result, dyn_result):
+    draws = load_EOS_posterior()
+    # number of EOS draws, in this case the number of EOS files
+    N_draws = 10
+    samples = calc_lightcurves.run_EOS(m1, m2, thetas,
+                                       N_EOS=N_draws, EOS_draws=draws)
+    wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
+    # check wind and dyn mej values exist
+    assert(len(wind_mej) > 0)
+    assert(len(dyn_mej) > 0)
+    # check wind and dyn mej values
+    for m, r in zip(wind_mej, wind_result):
+        assert(np.abs(m - r) < 1e-6)
+    for m, r in zip(dyn_mej, dyn_result):
+        assert(np.abs(m - r) < 1e-6)
+
+    # check that merger type matches NS/BH definition from EOS
+    for sample in samples:
+        if sample['merger_type'] == 1:
+            assert (samples['m1'] <= samples['mbns']) & (samples['m2'] <= samples['mbns'])  # noqa:E501
+        elif sample['merger_type'] == 2:
+            assert (samples['m1'] > samples['mbns']) & (samples['m2'] <= samples['mbns'])  # noqa:E501
+        elif sample['merger_type'] == 3:
+            assert (samples['m1'] > samples['mbns']) & (samples['m2'] > samples['mbns'])  # noqa:E501
 
 
-def test_run_EOS(EOS, m1, m2, thetas, result):
-    post_path = 'data/eos_post_PSRs+GW170817+J0030.csv'
-    with open(Path(__file__).parents[0] / post_path, 'rb') as f:
-        post = np.genfromtxt(f, names=True, delimiter=",")
-    # Note: make sure original weighting gets re-implented for real case
-    idxs = ['137', '138', '421', '422', '423',
-            '424', '425', '426', '427', '428']
+@pytest.mark.parametrize(
+    'm1, m2, thetas',
+    [[np.array([10.0]), np.array([1.5]), np.array([45])]]
+)
+def test_high_mass_ratio(m1, m2, thetas):
+    draws = load_EOS_posterior()
+    # number of EOS draws, in this case the number of EOS files
+    N_draws = 10
+    samples = calc_lightcurves.run_EOS(m1, m2, thetas,
+                                       N_EOS=N_draws, EOS_draws=draws)
+    mej = samples['mej']
+    # check high mass ratio has low mej
+    assert (np.mean(mej) < 1e-3)
 
     draws = {}
     for idx in idxs:
@@ -243,18 +282,36 @@ def test_run_EOS(EOS, m1, m2, thetas, result):
         with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
             draws[f'{idx}'] = np.genfromtxt(f, names=True, delimiter=",")
 
+@pytest.mark.parametrize(
+    'm1, m2, thetas',
+    [[np.array([1.4]), np.array([1.4]), np.array([45])]]
+)
+def test_low_mass_wind_check(m1, m2, thetas):
+    draws = load_EOS_posterior()
     # number of EOS draws, in this case the number of EOS files
     N_draws = 10
-    samples = run_EOS(EOS, m1, m2, thetas, N_EOS = N_draws, eospostdat = post, EOS_draws = draws, EOS_idx = idxs)
-    wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
-    # check wind and dyn mej values
-    assert (list(wind_mej[3:5]) == result[:, 1]).all
-    assert (list(dyn_mej[3:5]) == result[:, 0]).all
+    samples = calc_lightcurves.run_EOS(m1, m2, thetas,
+                                       N_EOS=N_draws, EOS_draws=draws)
+    wind_mej = samples['wind_mej']
+    # low mass BNS should have significant wind mej
+    assert (np.mean(wind_mej) > 1e-3)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1dc2c54 (Resolving additional issues)
+
+@pytest.mark.parametrize(
+    'm1, m2, thetas',
+    [[np.array([2.4]), np.array([2.4]), np.array([45])]]
+)
+def test_high_mass_wind_check(m1, m2, thetas):
+    draws = load_EOS_posterior()
+    # number of EOS draws, in this case the number of EOS files
+    N_draws = 10
+    samples = calc_lightcurves.run_EOS(m1, m2, thetas,
+                                       N_EOS=N_draws, EOS_draws=draws)
+    wind_mej = samples['wind_mej']
+    # high mass BNS should have small wind mej
+    assert (np.mean(wind_mej) < 1e-3)
+
+
 @pytest.mark.parametrize(
     'samples, result',
     [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
@@ -268,7 +325,7 @@ def test_ejecta_to_lc(samples, result):
         lightcurve_data = lightcurves.ejecta_to_lc(samples)
         # check if all 9 bands are present
         assert lightcurve_data['mag'].shape == (1,9,500)
-<<<<<<< HEAD
+
 def test_lightcurve_predictions(m1, m2, theta):
     # check that has_Remnant is working both for a mass
     # distribution and when passing specific masses
@@ -278,8 +335,22 @@ def test_lightcurve_predictions(m1, m2, theta):
     lightcurve_data2, has_Remnant2, _, _ = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_eos=2)  # noqa:E501
     assert has_Remnant1 == 1.0
     assert has_Remnant2 == 0.5
-=======
-# test_run_EOS('gp', np.array([1.5]), np.array([1.5]), np.ones(10)*45, result_gp10)
->>>>>>> c4096a0 (working on additions)
-=======
->>>>>>> 1dc2c54 (Resolving additional issues)
+        mock_KNTable.return_value = mock_mags
+        lightcurve_data = calc_lightcurves.ejecta_to_lc(samples)
+        # check the mock object was called once, and has the right value
+        mock_KNTable.assert_called_once()
+        assert mock_KNTable.return_value is mock_mags
+    # check if all 9 bands are present
+    assert lightcurve_data['mag'].shape == (1, 9, 500)
+
+
+# m1s = None, m2s = None, thetas = None, mass_dist = None, mass_draws = None
+@pytest.mark.parametrize(
+    'm1, m2, theta',
+    [[np.array([1.5, 4.0]), np.array([1.5, 1.2]), np.array([45, 45])]]
+)
+def test_lightcurve_predictions(m1, m2, theta):
+    lightcurve_data1, has_Remnant1 = calc_lightcurves.lightcurve_predictions(mass_dist=BNS_alsing, N_EOS=4, mass_draws=1)  # noqa:E501
+    lightcurve_data2, has_Remnant2 = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_EOS=2)  # noqa:E501
+    assert has_Remnant1 == 1.0
+    assert has_Remnant2 == 0.5
