@@ -1,8 +1,11 @@
 # Changelog
 
-## [1.0.2] - unreleased
+## [1.0.2] - 2022-07-09
 
-- No changes.
+- Add python 3.10 testing
+- Bump sklearn version to 1.1. Retrain classifiers.
+- Add `request_disk` to the condor submit file. Using 1GB as a start.
+- Restrict astropy >= 5.1.
 
 ## [1.0.1] - 2022-03-15
 
