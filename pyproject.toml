@@ -15,7 +15,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 scikit-learn = "^1.1"
-astropy = ">=4.0"
+astropy = ">=5.1"
 pandas = "^1.0"
 lalsuite = "^7.0"
 h5py = ">=2.10.0"
