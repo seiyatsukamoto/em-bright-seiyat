@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - unreleased
+
+- No changes.
+
 ## [1.0.2] - 2022-07-09
 
 - Add python 3.10 testing
