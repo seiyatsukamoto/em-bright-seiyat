@@ -14,6 +14,7 @@ exclude = [
     "ligo/em_bright/data/*json",
     "ligo/em_bright/data/*dat",
     "ligo/em_bright/data/*h5"
+    "ligo/em_bright/lightcurves/svdmodels"
 ]
 license = "MIT"
 
