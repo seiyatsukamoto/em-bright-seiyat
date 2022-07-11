@@ -40,9 +40,8 @@ tarball:
     - tarball
   variables:
     # don't need the git repo
-    GIT_STRATEGY: none
-    # be able to fetch data files from git
-    # GIT_STRATEGY: fetch
+    # GIT_STRATEGY: none
+    GIT_STRATEGY: fetch
     # install from the tarball
     INSTALL_TARGET: "ligo_em_bright-*.tar.*"
     # the name of the module to report coverage for
