@@ -9,7 +9,8 @@ authors = [
 packages = [
     { include = "ligo" },
 ]
-exclude = ["ligo/em_bright/data"]
+exclude = ["ligo/em_bright/data"
+           "ligo/em_bright/lightcurves/svdmodels"]
 license = "MIT"
 
 
