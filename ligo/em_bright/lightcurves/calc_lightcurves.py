@@ -34,33 +34,20 @@ if fix_seed == 'True':
     np.random.seed(0)
 
 # load posterior
-draws = em_bright_utils.load_eos_posterior()
-# load ejecta configs
-ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
-N_eos = ejecta_model['N_eos']
-eosname = ejecta_model['eosname']
-zeta = ejecta_model['zeta']
-# load lightcurve configs
-lightcurve_model = eval(config.get('lightcurve_configs', 'lightcurve_model'))
+draws = load_EOS_posterior()
+# load lightcurve model
+model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
-svd_path = 'data'
-model_path = Path(__file__).parents[1] / svd_path
+svd_path = 'svdmodels'
+model_path = Path(__file__).parents[0] / svd_path
 kwargs['ModelPath'] = model_path
-model = lightcurve_model['model']
-try:
-    mag_model = model + '_mag.pkl'
-    lbol_model = model + '_lbol.pkl'
-    with open(model_path / mag_model, 'rb') as f:
-        svd_mag_model = pickle.load(f)
-    with open(model_path / lbol_model, 'rb') as f:
-        svd_lbol_model = pickle.load(f)
-except FileNotFoundError:
-    mag_model = model + '_mag_tf.pkl'
-    lbol_model = model + '_lbol_tf.pkl'
-    with open(model_path / mag_model, 'rb') as f:
-        svd_mag_model = pickle.load(f)
-    with open(model_path / lbol_model, 'rb') as f:
-        svd_lbol_model = pickle.load(f)
+model = model_dict['model']
+mag_model = model + '_mag.pkl'
+lbol_model = model + '_lbol.pkl'
+with open(model_path / mag_model, 'rb') as f:
+    svd_mag_model = pickle.load(f)
+with open(model_path / lbol_model, 'rb') as f:
+    svd_lbol_model = pickle.load(f)
 # time for meta data
 date_time = time.strftime('%Y%m%d-%H%M%S')
 
@@ -133,6 +120,11 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     # sort masses to make sure m1 > m2
     m1s_sorted = np.maximum(m1s, m2s)
     m2s_sorted = np.minimum(m1s, m2s)
+    lightcurve_data = []
+    for i, m1 in enumerate(m1s):
+        samples = run_EOS(m1, m2s[i], thetas[i], N_EOS=N_EOS, EOS_draws=draws)
+        lightcurve_data.append(ejecta_to_lc(samples))
+    lightcurve_data = astropy.table.vstack(lightcurve_data)
 
     # draw thetas if needed
     try: 
