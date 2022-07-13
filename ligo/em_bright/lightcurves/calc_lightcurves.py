@@ -4,6 +4,7 @@ initial component masses
 """
 import numpy as np
 import astropy
+import pickle
 import time
 from scipy.interpolate import interpolate as interp
 from configparser import ConfigParser
@@ -15,6 +16,7 @@ from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019
 from gwemlightcurves.EjectaFits import KrFo2019
 
+# load configs
 rel_path = 'etc/conf.ini'
 conf_path = Path(__file__).parents[3] / rel_path
 config = ConfigParser()
@@ -25,6 +27,19 @@ if fix_seed:
 
 # load posterior
 draws = load_EOS_posterior()
+# load lightcurve model
+model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
+kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
+svd_path = 'svdmodels'
+model_path = Path(__file__).parents[0] / svd_path
+kwargs['ModelPath'] = model_path
+model = model_dict['model']
+mag_model = model + '_mag.pkl'
+lbol_model = model + '_lbol.pkl'
+with open(model_path / mag_model, 'rb') as f:
+    svd_mag_model = pickle.load(f)
+with open(model_path / lbol_model, 'rb') as f:
+    svd_lbol_model = pickle.load(f)
 # time for meta data
 date_time = time.strftime('%Y%m%d-%H%M%S')
 
@@ -62,11 +77,11 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
         idx_thetas = np.where(thetas > 90.)[0]
         thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
-    lightcurve_data = KNTable()
+    lightcurve_data = []
     for i, m1 in enumerate(m1s):
         samples = run_EOS(m1, m2s[i], thetas[i], N_EOS=N_EOS, EOS_draws=draws)
-        data = ejecta_to_lc(samples)
-        lightcurve_data = astropy.table.vstack([data, lightcurve_data])
+        lightcurve_data.append(ejecta_to_lc(samples))
+    lightcurve_data = astropy.table.vstack(lightcurve_data)
 
     remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
     has_Remnant = len(remnant)/len(lightcurve_data['mej'])
@@ -371,6 +386,8 @@ def ejecta_to_lc(samples, save_pkl=False):  # reimplement save_pkl?
     svd_path = 'svdmodels'
     model_path = Path(__file__).parents[0] / svd_path
     kwargs['ModelPath'] = model_path
+    kwargs['ModelFileMag'] = svd_mag_model
+    kwargs['ModelFileLbol'] = svd_lbol_model
 
     model = model_dict['model']
 

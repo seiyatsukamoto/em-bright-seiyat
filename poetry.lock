@@ -274,7 +274,7 @@ scipy = "*"
 
 [[package]]
 name = "gwemlightcurves"
-version = "0.0.5+3.g1fb01f6"
+version = "0.0.5+6.g993c9ad"
 description = "A python package for kilonova lightcurves"
 category = "main"
 optional = false
@@ -302,7 +302,7 @@ sncosmo = "*"
 type = "git"
 url = "https://github.com/mcoughlin/gwemlightcurves"
 reference = "master"
-resolved_reference = "1fb01f6185ab02e65d522063a6fb3b0bf3ab4022"
+resolved_reference = "993c9ad2026608ee01c688d81757207bb21cbcd7"
 
 [[package]]
 name = "h5py"
