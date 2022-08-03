@@ -53,7 +53,7 @@ PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
 
 from astropy.utils.data import download_file
 
-__version__ = '1.0.2'
+__version__ = '1.0.1'
 
 PACKAGE_DATA_LINKS = {
     'equil_2H.dat': 'https://git.ligo.org/deep.chatterjee/em-bright/-/raw/v1.0.2/ligo/em_bright/data/equil_2H.dat',  # noqa: E501
