@@ -26,3 +26,5 @@ ligo/em_bright/data/MASS_GAP.pickle filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/EOS_BAYES_FACTOR_MAP.json filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/EOS_MAX_MASS_MAP.json filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/EOS_POSTERIOR_DRAWS.h5 filter=lfs diff=lfs merge=lfs -text
+ligo/em_bright/data/Bu2019inc_lbol.pkl filter=lfs diff=lfs merge=lfs -text
+ligo/em_bright/data/Bu2019inc_mag.pkl filter=lfs diff=lfs merge=lfs -text
