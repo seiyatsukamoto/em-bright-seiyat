@@ -83,7 +83,15 @@ except ModuleNotFoundError:
         common_submit_dict["executable"] = exect
         common_submit_dict["arguments"] = arg_sub
         condor_sub_dict[exect] = htcondor.Submit(
-            common_submit_dict)
+            universe='vanilla',
+            request_disk="1GB",
+            executable=exect,
+            arguments=arg_sub,
+            output='$(executable).stdout',
+            error='$(executable).stderr',
+            log='$(executable).log',
+            accounting_group=accounting_group
+        )
     # Creating list of sqlite files to create the dag
     inj_list = glob(
         os.path.join(
