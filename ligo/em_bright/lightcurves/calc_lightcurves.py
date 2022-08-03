@@ -34,12 +34,12 @@ if fix_seed == 'True':
     np.random.seed(0)
 
 # load posterior
-draws = load_EOS_posterior()
+draws = em_bright.load_eos_posterior()
 # load lightcurve model
 model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
-svd_path = 'svdmodels'
-model_path = Path(__file__).parents[0] / svd_path
+svd_path = 'data'
+model_path = Path(__file__).parents[1] / svd_path
 kwargs['ModelPath'] = model_path
 model = model_dict['model']
 mag_model = model + '_mag.pkl'
@@ -57,9 +57,8 @@ N_cores = 1
 #downsample = True
 downsample = False
 
-def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
-                           thetas=None, mass_dist=None, mass_draws=None,
-                           N_eos=N_eos, N_cores=N_cores):
+def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
+                           mass_dist=None, mass_draws=None, N_eos=50):
     '''
     Main function to carry out ejecta quantity and lightcurve
     predictions. Needs either: m1 and m2 OR
@@ -121,10 +120,15 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     m1s_sorted = np.maximum(m1s, m2s)
     m2s_sorted = np.minimum(m1s, m2s)
     lightcurve_data = []
+    all_eos_metadata = []
     for i, m1 in enumerate(m1s):
-        samples = run_EOS(m1, m2s[i], thetas[i], N_EOS=N_EOS, EOS_draws=draws)
-        lightcurve_data.append(ejecta_to_lc(samples))
+        samples, eos_metadata = run_eos(m1, m2s[i], thetas[i],
+                                        N_eos=N_eos, eos_draws=draws)
+        lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
+        lightcurve_data.append(lightcurves)
+        all_eos_metadata.append(eos_metadata)
     lightcurve_data = astropy.table.vstack(lightcurve_data)
+    eos_metadata = astropy.table.vstack(all_eos_metadata)
 
     # draw thetas if needed
     try: 
@@ -259,7 +263,6 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     '''
     Uses eos draws provided and calculates ejecta quantities, including
     total mass ejecta, dyn and wind ejecta, velocity of ejecta,
-
     compactness, and tidal deformability
 
     Parameters
@@ -527,7 +530,6 @@ def ejecta_to_lightcurve(samples):
     #phis = 30 * np.ones(num_samples)
     #samples['phi'] = phis
 
-    '''
     # intitial time, final time, and timestep for lightcurve calculation
     lightcurve_model = eval(config.get('lightcurve_configs',
                                        'lightcurve_model'))

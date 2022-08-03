@@ -193,7 +193,6 @@ def test_lightcurve_predictions(m1, m2, theta, yields_ejecta, percentile_results
     for percentile_type in percentile_types:
         for percentile, result in zip(percentiles[percentile_type], percentile_results[percentile_type]):  # noqa:E501
             assert abs(percentile-result) < 1e-6
-=======
     assert (m1 == result[0]).all
     assert (m2 == result[1]).all
 
@@ -243,3 +242,12 @@ def test_ejecta_to_lc(samples, result):
         lightcurve_data = lightcurves.ejecta_to_lc(samples)
         # check if all 9 bands are present
         assert lightcurve_data['mag'].shape == (1,9,500)
+def test_lightcurve_predictions(m1, m2, theta):
+    # check that has_Remnant is working both for a mass
+    # distribution and when passing specific masses
+    # BNS alsing will usually produce significant ejecta
+    lightcurve_data1, has_Remnant1, _, _ = calc_lightcurves.lightcurve_predictions(mass_dist=BNS_alsing, N_eos=2, mass_draws=2)  # noqa:E501
+    # NSBH mergers will frequently produce minimal mass ejecta
+    lightcurve_data2, has_Remnant2, _, _ = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_eos=2)  # noqa:E501
+    assert has_Remnant1 == 1.0
+    assert has_Remnant2 == 0.5
