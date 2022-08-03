@@ -51,13 +51,13 @@ def test_initial_mass_draws(dist, result):
     output = calc_lightcurves.initial_mass_draws(dist, mass_draws_test)
     m1, m2 = output[0], output[1]
     # check component mass values exist
-    assert (len(m1) > 0)
-    assert (len(m2) > 0)
+    assert(len(m1) > 0)
+    assert(len(m2) > 0)
     # check component mass values
     for m, r in zip(m1, result[0]):
-        assert (np.abs(m - r) < 1e-6)
+        assert(np.abs(m - r) < 1e-6)
     for m, r in zip(m2, result[1]):
-        assert (np.abs(m - r) < 1e-6)
+        assert(np.abs(m - r) < 1e-6)
 
 
 wind_result = [0.0256483901004048, 0.00015, 0.00015,
@@ -83,13 +83,13 @@ def test_run_eos(m1, m2, thetas, wind_result, dyn_result):
                                           eos_draws=draws)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
     # check wind and dyn mej values exist
-    assert (len(wind_mej) > 0)
-    assert (len(dyn_mej) > 0)
+    assert(len(wind_mej) > 0)
+    assert(len(dyn_mej) > 0)
     # check wind and dyn mej values
     for m, r in zip(wind_mej, wind_result):
-        assert (np.abs(m - r) < 1e-6)
+        assert(np.abs(m - r) < 1e-6)
     for m, r in zip(dyn_mej, dyn_result):
-        assert (np.abs(m - r) < 1e-6)
+        assert(np.abs(m - r) < 1e-6)
 
     # check that merger type matches NS/BH definition from eos
     for sample in samples:

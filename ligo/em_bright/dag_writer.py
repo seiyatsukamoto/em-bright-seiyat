@@ -84,7 +84,6 @@ except ModuleNotFoundError:
         common_submit_dict["arguments"] = arg_sub
         condor_sub_dict[exect] = htcondor.Submit(
             universe='vanilla',
-            request_disk="1GB",
             executable=exect,
             arguments=arg_sub,
             output='$(executable).stdout',
