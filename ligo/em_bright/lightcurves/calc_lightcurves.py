@@ -244,7 +244,7 @@ def run_eos(m1, m2, thetas, N_eos=50, eos_draws=None):
     if np.min(samples['mej']) < 0:
         print('---------------mej less than zero!!!-----------------')
     idx = np.where(samples['mej'] <= 0)[0]
-    samples['mej'][idx] = 1e-11
+    samples['mej'][idx] = err_dict['min_mej']
 
     if (model == 'Bu2019inc'):
         idx = np.where(samples['mej'] <= 1e-6)[0]
