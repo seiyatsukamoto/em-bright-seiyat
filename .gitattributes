@@ -1,4 +1,6 @@
+ligo/em_bright/data/knn_ns_classifier.pkl filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/equil_2H.dat filter=lfs diff=lfs merge=lfs -text
+ligo/em_bright/data/knn_em_classifier.pkl filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/HQC18.pickle filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/MPA1.pickle filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/SKI3.pickle filter=lfs diff=lfs merge=lfs -text

@@ -95,11 +95,6 @@ test:python3.9:
     - .test
   image: python:3.9
 
-test:python3.10:
-  extends:
-    - .test
-  image: python:3.10
-
 # -- lint -------------------
 #
 # These jobs check the code
