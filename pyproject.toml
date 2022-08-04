@@ -21,8 +21,7 @@ pandas = "^1.0"
 lalsuite = "^7.0"
 htcondor = ">=9.0.6"
 h5py = ">=2.10.0"
-#gwemlightcurves = "^0.0.5"
-gwemlightcurves = {git = "https://github.com/mcoughlin/gwemlightcurves", branch = "master"}
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

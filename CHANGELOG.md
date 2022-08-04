@@ -33,6 +33,9 @@
 
 - Restrict scikit-learn to v1.1.1 due to model persistance 
 - Update links to classifiers because project is moved
+
+## [1.0.2] - 2022-07-09
+
 - Add python 3.10 testing
 - Bump sklearn version to 1.1. Retrain classifiers.
 - Add `request_disk` to the condor submit file. Using 1GB as a start.
