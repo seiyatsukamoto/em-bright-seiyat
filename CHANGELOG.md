@@ -46,8 +46,6 @@
   will be computed from each, and re-weighted based on the bayes factor
   calculation done by Ghosh et. al. in https://doi.org/10.1103/PhysRevD.104.083003.
 
-- Drop python 3.7 support since IGWN environments no longer support it.
-
 ## [1.0.1] - 2022-03-15
 
 - Fix failing test v1.0.0.

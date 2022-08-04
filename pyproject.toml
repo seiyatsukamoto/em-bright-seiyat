@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "1.1.0"
+version = "1.0.2"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 readme = "README.md"
 authors = [
@@ -16,7 +16,6 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 scikit-learn = "==1.1.3"  #  model trained with 1.1.3. see :https://scikit-learn.org/stable/model_persistence.html
-scikit-learn = "^0.24"
 astropy = ">=5.1"
 pandas = "^1.0"
 lalsuite = "^7.0"
@@ -24,6 +23,7 @@ h5py = ">=3.7.0"
 htcondor = ">=9.0.6"
 #gwemlightcurves = "^0.0.5"
 gwemlightcurves = {git = "https://github.com/mcoughlin/gwemlightcurves", branch = "master"}
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

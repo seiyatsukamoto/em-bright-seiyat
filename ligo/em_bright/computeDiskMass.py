@@ -252,7 +252,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     # FIXME
     if type(BNS) != np.ndarray:
         if BNS or BBH:
-            return float(not (BBH) or BNS)
+            return float(not(BBH) or BNS)
 
     if not kerr:
         alpha = 0.406
