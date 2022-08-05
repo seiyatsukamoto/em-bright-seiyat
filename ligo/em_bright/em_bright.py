@@ -27,7 +27,7 @@ assert set(_classifiers) == set(EOS_BAYES_FACTORS), "Inconsistency in"
 
 
 def mchirp(m1, m2):
-    return(m1 * m2)**(3./5.)/(m1 + m2)**(1./5.)
+    return (m1 * m2)**(3./5.)/(m1 + m2)**(1./5.)
 
 
 def q(m1, m2):
