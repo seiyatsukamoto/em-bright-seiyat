@@ -1,12 +1,5 @@
-<<<<<<< HEAD
-from pathlib import Path
 import pytest
 import numpy as np
-from astropy.table import Table
-=======
-import pytest
-import numpy as np
->>>>>>> 1bf572b (Revert "upstream changes")
 from unittest.mock import patch
 from gwemlightcurves.KNModels import KNTable
 from ..lightcurves import calc_lightcurves
@@ -15,10 +8,7 @@ from ..lightcurves.mass_distributions import BNS_uniform, BNS_LRR
 from ..lightcurves.mass_distributions import NSBH_uniform, NSBH_LRR
 from ..lightcurves.lightcurve_utils import load_eos_posterior
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 1bf572b (Revert "upstream changes")
 # m1, m2 values for Alsing, Farrow, Zhu initial NS/BH mass dists
 # results produced by running function with the params below
 als_result = [[1.53205977, 1.76327504, 1.68504319],
@@ -44,15 +34,6 @@ NSBH_LRR_result = [[1.55573485, 2.50949848, 1.43821419],
 
 
 @pytest.mark.parametrize(
-<<<<<<< HEAD
-<<<<<<< HEAD
-    'Type, result',
-    [['BNS_alsing', als_result],
-     ['BNS_farrow', far_result],
-     ['NSBH_zhu', zhu_result],
-=======
-=======
->>>>>>> 1bf572b (Revert "upstream changes")
     'dist, result',
     [[BNS_alsing, als_result],
      [BNS_farrow, far_result],
@@ -61,21 +42,6 @@ NSBH_LRR_result = [[1.55573485, 2.50949848, 1.43821419],
      [BNS_LRR, BNS_LRR_result],
      [NSBH_uniform, NSBH_uni_result],
      [NSBH_LRR, NSBH_LRR_result],
-<<<<<<< HEAD
->>>>>>> 6073c62 (Resolving comments)
-     ]
-)
-def test_initial_mass_draws(Type, result):
-    # five initial mass draws for unit test
-    mass_draws_test = 3
-    output = gwlc_functions.initial_mass_draws(Type, mass_draws_test)
-    m1, m2 = output[0], output[1]
-    # check component mass values
-    for m, r in zip(m1, result[0]):
-        assert(np.abs(m - r) < 1e-6)
-    for m, r in zip(m2, result[1]):
-        assert(np.abs(m - r) < 1e-6)
-=======
      ]
 )
 def test_initial_mass_draws(dist, result):
@@ -91,7 +57,6 @@ def test_initial_mass_draws(dist, result):
         assert (np.abs(m - r) < 1e-6)
     for m, r in zip(m2, result[1]):
         assert (np.abs(m - r) < 1e-6)
->>>>>>> 1bf572b (Revert "upstream changes")
 
 
 wind_result = [0.0256483901004048, 0.00015, 0.00015,
@@ -103,14 +68,7 @@ dyn_result = [0.026983497953596173, 0.02016999499804752,
               0.023883542614886615, 0.02623057446187879,
               0.013457388566138451]
 
-<<<<<<< HEAD
-result_gp10 = np.array([[0.022264876109183446, 0.024506102696707492],
-                        [0.0018540989881778943, 0.0006251326630963076]])
 
-# once full EOS implementaion is finished update np.ones(10)
-=======
-
->>>>>>> 1bf572b (Revert "upstream changes")
 @pytest.mark.parametrize(
     'm1, m2, thetas, wind_result, dyn_result',
     [[np.array([2.1]), np.array([1.5]), np.array([45]),
@@ -124,15 +82,6 @@ def test_run_eos(m1, m2, thetas, wind_result, dyn_result):
                                           eos_draws=draws)
     wind_mej, dyn_mej = samples['wind_mej'], samples['dyn_mej']
     # check wind and dyn mej values exist
-<<<<<<< HEAD
-    assert(len(wind_mej) > 0)
-    assert(len(dyn_mej) > 0)
-    # check wind and dyn mej values
-    for m, r in zip(wind_mej, wind_result):
-        assert(np.abs(m - r) < 1e-6)
-    for m, r in zip(dyn_mej, dyn_result):
-        assert(np.abs(m - r) < 1e-6)
-=======
     assert (len(wind_mej) > 0)
     assert (len(dyn_mej) > 0)
     # check wind and dyn mej values
@@ -140,7 +89,6 @@ def test_run_eos(m1, m2, thetas, wind_result, dyn_result):
         assert (np.abs(m - r) < 1e-6)
     for m, r in zip(dyn_mej, dyn_result):
         assert (np.abs(m - r) < 1e-6)
->>>>>>> 1bf572b (Revert "upstream changes")
 
     # check that merger type matches NS/BH definition from eos
     for sample in samples:
@@ -167,15 +115,6 @@ def test_high_mass_ratio(m1, m2, thetas):
     # check high mass ratio has low mej on average
     assert (np.mean(mej) < 1e-3)
 
-<<<<<<< HEAD
-    draws = {}
-    for idx in idxs:
-        print('EOS file:', idx)
-        EOS_draw_path = f'data/MACROdraw-1151{idx}-0.csv'
-        with open(Path(__file__).parents[0] / EOS_draw_path, 'rb') as f:
-            draws[f'{idx}'] = np.genfromtxt(f, names=True, delimiter=",")
-=======
->>>>>>> 1bf572b (Revert "upstream changes")
 
 @pytest.mark.parametrize(
     'm1, m2, thetas',
@@ -210,26 +149,13 @@ def test_high_mass_wind_check(m1, m2, thetas):
 
 
 @pytest.mark.parametrize(
-<<<<<<< HEAD
-    'samples, result',
-    [[Table(([.1], [35], [0]), names=('mej', 'theta', 'sample_id')), [-16.640245217501654, -7.776421192396103, -10.355205145387737]]]
-)
-<<<<<<< HEAD
-def test_ejecta_to_lc(samples, result):
-=======
-=======
     'samples',
     [KNTable(([.1], [35], [0]), names=('mej', 'theta', 'sample_id'))]
 )
->>>>>>> 1bf572b (Revert "upstream changes")
 def test_ejecta_to_lightcurve(samples):
     mags = [np.ones((9, 500))]
     t = [np.ones(500)]
     mock_mags = KNTable((t, mags), names=('t', 'mag'))
-<<<<<<< HEAD
->>>>>>> 6073c62 (Resolving comments)
-=======
->>>>>>> 1bf572b (Revert "upstream changes")
     with patch('gwemlightcurves.KNModels.KNTable.model') as mock_KNTable:
         mock_KNTable.return_value = mock_mags
         lightcurve_data, _ = calc_lightcurves.ejecta_to_lightcurve(samples)

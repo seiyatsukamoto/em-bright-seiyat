@@ -4,10 +4,7 @@ initial component masses
 """
 import numpy as np
 import astropy
-<<<<<<< HEAD
-=======
 import pickle
->>>>>>> 1bf572b (Revert "upstream changes")
 import time
 from scipy.interpolate import interpolate as interp
 from configparser import ConfigParser
@@ -19,10 +16,7 @@ from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019
 from gwemlightcurves.EjectaFits import KrFo2019
 
-<<<<<<< HEAD
-=======
 # load configs
->>>>>>> 1bf572b (Revert "upstream changes")
 rel_path = 'etc/conf.ini'
 conf_path = Path(__file__).parents[3] / rel_path
 config = ConfigParser()
@@ -32,11 +26,7 @@ if fix_seed:
     np.random.seed(0)
 
 # load posterior
-<<<<<<< HEAD
-draws = load_EOS_posterior()
-=======
 draws = em_bright.load_eos_posterior()
->>>>>>> 1bf572b (Revert "upstream changes")
 # load lightcurve model
 model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
@@ -388,11 +378,8 @@ def ejecta_to_lightcurve(samples):
 
     # read from config file
     kwargs['ModelPath'] = model_path
-<<<<<<< HEAD
-=======
     kwargs['ModelFileMag'] = svd_mag_model
     kwargs['ModelFileLbol'] = svd_lbol_model
->>>>>>> 1bf572b (Revert "upstream changes")
 
     model = model_dict['model']
     lightcurve_metadata = {'model_conf': model_dict}
