@@ -13,8 +13,7 @@ from pathlib import Path
 import ligo.em_bright.lightcurves.lightcurve_utils as em_bright
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
-from gwemlightcurves.EjectaFits import PaDi2019
-from gwemlightcurves.EjectaFits import KrFo2019
+from gwemlightcurves.EjectaFits import PaDi2019, KrFo2019
 
 # load configs
 rel_path = 'etc/conf.ini'
@@ -27,13 +26,16 @@ if fix_seed:
 
 # load posterior
 draws = em_bright.load_eos_posterior()
-# load lightcurve model
-model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
+# load ejecta configs
+ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
+N_eos = ejecta_model['N_eos']
+# load lightcurve configs
+lightcurve_model = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
 svd_path = 'data'
 model_path = Path(__file__).parents[1] / svd_path
 kwargs['ModelPath'] = model_path
-model = model_dict['model']
+model = lightcurve_model['model']
 mag_model = model + '_mag.pkl'
 lbol_model = model + '_lbol.pkl'
 with open(model_path / mag_model, 'rb') as f:
@@ -45,10 +47,11 @@ date_time = time.strftime('%Y%m%d-%H%M%S')
 
 
 def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
-                           mass_dist=None, mass_draws=None, N_eos=50):
+                           mass_dist=None, mass_draws=None, N_eos=N_eos):
     '''
     Main function to carry out ejecta quantity and lightcurve
-    predictions. Needs either: m1, m2, and theta OR mass_dist
+    predictions. Needs either: m1, m2, and theta OR
+    mass_dist and mass draws. Both need the N_eos argument.
 
     Parameters
     ----------
@@ -97,7 +100,8 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
 
     remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
     has_Remnant = len(remnant)/len(lightcurve_data['mej'])
-
+    print(eos_metadata)
+    print(lightcurve_metadata)
     return lightcurve_data, has_Remnant, eos_metadata, lightcurve_metadata
 
 
@@ -128,7 +132,7 @@ def initial_mass_draws(dist, mass_draws):
     return m1, m2
 
 
-def run_eos(m1, m2, thetas, N_eos=50, eos_draws=None):
+def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     '''
     Uses eos draws provided and calculates ejecta quantities, including
     total mass ejecta, dyn and wind ejecta, velocity of ejecta,
@@ -156,7 +160,7 @@ def run_eos(m1, m2, thetas, N_eos=50, eos_draws=None):
     '''
 
     mchirp, eta, q = lightcurve_utils.ms2mc(m1, m2)
-    model, chi_eff = model_dict['model'], model_dict['chi_eff']
+    model, chi_eff = lightcurve_model['model'], lightcurve_model['chi_eff']
 
     data = np.vstack((m1, m2, chi_eff, mchirp, eta, q)).T
     samples = KNTable(data,
@@ -235,7 +239,7 @@ def run_eos(m1, m2, thetas, N_eos=50, eos_draws=None):
     # Add draw from a gaussian in the log of
     # ejecta mass with 1-sigma size of 70%
     err_dict = eval(config.get('lightcurve_configs', 'mej_error_dict'))
-    error = err_dict['error']
+    error = ejecta_model['mej_error']
     if error == 'log':
         samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), err_dict['log_val']))  # noqa:E501
     elif error == 'lin':
@@ -246,7 +250,7 @@ def run_eos(m1, m2, thetas, N_eos=50, eos_draws=None):
     if np.min(samples['mej']) < 0:
         print('---------------mej less than zero!!!-----------------')
     idx = np.where(samples['mej'] <= 0)[0]
-    samples['mej'][idx] = err_dict['min_mej']
+    samples['mej'][idx] = ejecta_model['min_mej']
 
     if (model == 'Bu2019inc'):
         idx = np.where(samples['mej'] <= 1e-6)[0]
@@ -332,10 +336,9 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
             etas.append(row['eta'])
 
     eos_metadata['m1s'], eos_metadata['m2s'] = m1s, m2s
-    eos_metadata['indices'] = indices
-
-    mej_err = eval(config.get('lightcurve_configs', 'mej_error_dict'))
-    eos_metadata['mej_err'] = mej_err
+    eos_metadata['eos_draw_indices'] = indices
+    eos_metadata['mej_err'] = ejecta_model['mej_error']
+    eos_metadata['N_eos'] = N_eos
 
     # create a new table including each eos draw for each
     # component mass pair, and new quantities
@@ -371,18 +374,19 @@ def ejecta_to_lightcurve(samples):
     samples['phi'] = phis
 
     # intitial time, final time, and timestep for lightcurve calculation
-    model_dict = eval(config.get('lightcurve_configs', 'lightcurve_model'))
-    samples['tini'] = model_dict['tini']
-    samples['tmax'] = model_dict['tmax']
-    samples['dt'] = model_dict['dt']
+    lightcurve_model = eval(config.get('lightcurve_configs',
+                                       'lightcurve_model'))
+    samples['tini'] = lightcurve_model['tini']
+    samples['tmax'] = lightcurve_model['tmax']
+    samples['dt'] = lightcurve_model['dt']
 
     # read from config file
     kwargs['ModelPath'] = model_path
     kwargs['ModelFileMag'] = svd_mag_model
     kwargs['ModelFileLbol'] = svd_lbol_model
 
-    model = model_dict['model']
-    lightcurve_metadata = {'model_conf': model_dict}
+    model = lightcurve_model['model']
+    lightcurve_metadata = {'model_conf': lightcurve_model}
     lightcurve_data = KNTable.model(model, samples, **kwargs)
 
     return lightcurve_data, lightcurve_metadata
