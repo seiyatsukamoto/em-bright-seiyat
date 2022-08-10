@@ -100,8 +100,6 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
 
     remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
     has_Remnant = len(remnant)/len(lightcurve_data['mej'])
-    print(eos_metadata)
-    print(lightcurve_metadata)
     return lightcurve_data, has_Remnant, eos_metadata, lightcurve_metadata
 
 
