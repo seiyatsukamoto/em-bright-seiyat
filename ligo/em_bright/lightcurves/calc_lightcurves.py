@@ -105,10 +105,8 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
 
 def find_percentiles(lightcurve_data):
     '''
-    Function to find mass ejecta lightcurve
-
-    predictions. Needs either: m1, m2, and theta OR
-    mass_dist and mass draws. Both need the N_eos argument.
+    Function to find 10th, 50th, and 90th percentiles
+    for mass ejecta and magnitude bands
 
     Parameters
     ----------
