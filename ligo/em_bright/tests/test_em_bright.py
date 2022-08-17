@@ -105,6 +105,21 @@ def test_compute_disk_mass(m1, m2, chi1, chi2,
     assert has_remnant == non_zero_remnant
 
 
+@pytest.mark.parametrize(
+    'masses_spins',
+    [np.array([2.0, 2.0, 0.0, 0.0]),
+     np.array([5.0, 2.0, 0.99, 0.0])]
+)
+def test_compute_disk_mass_numpy_scalar(masses_spins):
+    M_remnant_numpy_float = em_bright.computeDiskMass.computeDiskMass(
+        *(v for v in masses_spins), eosname="2H"
+    )
+    M_remnant_float = em_bright.computeDiskMass.computeDiskMass(
+        *(float(v) for v in masses_spins), eosname="2H"
+    )
+    assert M_remnant_numpy_float == M_remnant_float
+
+
 def test_embright_categorization():
     for eosname, max_mass in EOS_MAX_MASS.items():
         with NamedTemporaryFile() as tf:

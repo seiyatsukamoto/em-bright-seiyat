@@ -190,6 +190,16 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     >>> computeDiskMass(m1, m2, chi1, chi2,
     ...                 R_ns=r_ns, max_mass=max_mass, eosname=None)
     array([0.12265712, 0.04272054, 0.])
+    >>> # m1=2.0, m2=2.0 is a BNS event assuming 2H EOS
+    >>> # DiskMass == 1.0 is a ad hoc value assigned for BNS events
+    >>> masses_spins = np.array([2.0, 2.0, 0., 0.])
+    >>> computeDiskMass(masses_spins[0], masses_spins[1],
+    ...                 masses_spins[2], masses_spins[3], eosname="2H")
+    1.0
+    >>> masses_spins = np.array([5.0, 2.0, 0.99, 0.])
+    >>> computeDiskMass(masses_spins[0], masses_spins[1],
+    ...                 masses_spins[2], masses_spins[3], eosname="2H")
+    0.6321412881595185
 
     Notes
     -----
@@ -236,7 +246,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     BBH = m_secondary > max_mass
     BNS = m_primary < max_mass
     # FIXME
-    if type(BNS) == bool:
+    if type(BNS) != np.ndarray:
         if BNS or BBH:
             return float(not (BBH) or BNS)
 
