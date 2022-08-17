@@ -72,7 +72,7 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
     -------
     lightcurve_data: astropy table object
         ejecta quantities and lightcurves for various mag bands
-    has_Remnant: float
+    yields_ejecta: float
         fraction (0 to 1) of mergers with ejecta mass > 1e-3 solar masses
     eos_metadata: astropy table object
         meta data describing eos draws
@@ -98,9 +98,44 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
     lightcurve_data = astropy.table.vstack(lightcurve_data)
     eos_metadata = astropy.table.vstack(all_eos_metadata)
 
-    remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
-    has_Remnant = len(remnant)/len(lightcurve_data['mej'])
-    return lightcurve_data, has_Remnant, eos_metadata, lightcurve_metadata
+    sig_ejecta = lightcurve_data[lightcurve_data['mej'] > 1e-3]
+    yields_ejecta = len(sig_ejecta)/len(lightcurve_data['mej'])
+    return lightcurve_data, yields_ejecta, eos_metadata, lightcurve_metadata
+
+
+def find_percentiles(lightcurve_data):
+    '''
+    Function to find mass ejecta lightcurve
+
+    predictions. Needs either: m1, m2, and theta OR
+    mass_dist and mass draws. Both need the N_eos argument.
+
+    Parameters
+    ----------
+    lightcurve_data: KNTable object
+        ejecta quatities and lightcurves for various mag bands
+
+    Returns
+    -------
+    percentiles: dictionary
+        10th, 50th, 90th percentiles of mass ejecta and magnitude bands
+    '''
+    mej = lightcurve_data['mej']
+    mags = lightcurve_data['mag']
+    percentiles = {}
+    percentile_list = [10, 50, 90]
+    peak_mags = {}
+    bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
+    # find peak mag for each mag in each lightcurve
+    for i, band in enumerate(bands):
+        peaks = []
+        lightcurves = mags[:, i, :]
+        for lightcurve in lightcurves:
+            peaks.append(np.nanmin(lightcurve))
+        peak_mags[band] = peaks
+        percentiles[band] = np.nanpercentile(peaks, percentile_list)
+    percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    return percentiles
 
 
 def initial_mass_draws(dist, mass_draws):
@@ -134,6 +169,7 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     '''
     Uses eos draws provided and calculates ejecta quantities, including
     total mass ejecta, dyn and wind ejecta, velocity of ejecta,
+
     compactness, and tidal deformability
 
     Parameters

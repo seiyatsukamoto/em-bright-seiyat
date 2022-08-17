@@ -166,17 +166,29 @@ def test_ejecta_to_lightcurve(samples):
     assert lightcurve_data['mag'].shape == (1, 9, 500)
 
 
-# m1s = None, m2s = None, thetas = None, mass_dist = None, mass_draws = None
+u_band_percentiles = [-13.19872909, -13.09596377, -2.63326588]
+r_band_percentiles = [-14.64907056, -14.56544989,  -4.61280546]
+mej_percentiles = [1.0e-11, 3.61024744e-03, 4.09925496e-03]
+
+
 @pytest.mark.parametrize(
-    'm1, m2, theta',
-    [[np.array([1.5, 4.0]), np.array([1.5, 1.2]), np.array([45, 45])]]
+    'm1, m2, theta, yields_ejecta, percentile_results',
+    [[np.array([1.5, 4.0]), np.array([1.5, 1.2]),
+      np.array([45, 45]), [1.0, 0.7], {'mej': mej_percentiles,
+      'u': u_band_percentiles, 'r': r_band_percentiles}]]
 )
-def test_lightcurve_predictions(m1, m2, theta):
-    # check that has_Remnant is working both for a mass
+def test_lightcurve_predictions(m1, m2, theta, yields_ejecta, percentile_results):  # noqa:E501
+    # check that yields_ejecta is working both for a mass
     # distribution and when passing specific masses
+    # also check percentiles are working for mag and mej
     # BNS alsing will usually produce significant ejecta
-    lightcurve_data1, has_Remnant1, _, _ = calc_lightcurves.lightcurve_predictions(mass_dist=BNS_alsing, N_eos=2, mass_draws=2)  # noqa:E501
-    # NSBH mergers will frequently produce minimal mass ejecta
-    lightcurve_data2, has_Remnant2, _, _ = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_eos=2)  # noqa:E501
-    assert has_Remnant1 == 1.0
-    assert has_Remnant2 == 0.5
+    lightcurve_data1, yields_ejecta1, _, _ = calc_lightcurves.lightcurve_predictions(mass_dist=BNS_alsing, N_eos=2, mass_draws=2)  # noqa:E501
+    # NSBH mergers will more frequently produce minimal mass ejecta
+    lightcurve_data2, yields_ejecta2, _, _ = calc_lightcurves.lightcurve_predictions(m1s=m1, m2s=m2, thetas=theta, N_eos=5)  # noqa:E501
+    assert yields_ejecta1 == yields_ejecta[0]
+    assert yields_ejecta2 == yields_ejecta[1]
+    percentiles = calc_lightcurves.find_percentiles(lightcurve_data2)
+    percentile_types = ['mej', 'u', 'r']
+    for percentile_type in percentile_types:
+        for percentile, result in zip(percentiles[percentile_type], percentile_results[percentile_type]):  # noqa:E501
+            assert abs(percentile-result) < 1e-6
