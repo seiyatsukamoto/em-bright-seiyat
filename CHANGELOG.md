@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.4] - unreleased
+
+- No changes yet
+
 ## [1.0.3] - 2022-09-07
 
 - Restrict scikit-learn to v1.1.1 due to model persistance 
