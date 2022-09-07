@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "1.0.2"
+version = "1.0.3"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 authors = [
     "Deep Chatterjee <deep.chatterjee@ligo.org>",
@@ -14,7 +14,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-scikit-learn = "^1.1"
+scikit-learn = "==1.1.1"  #  models were trained with 1.1.1. see :https://scikit-learn.org/stable/model_persistence.html
 astropy = ">=5.1"
 pandas = "^1.0"
 lalsuite = "^7.0"
