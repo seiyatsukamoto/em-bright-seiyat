@@ -6,14 +6,20 @@ import numpy as np
 import astropy
 import pickle
 import time
+from astropy.cosmology import Planck18
+from astropy.coordinates import Distance
+from astropy import units as u
 from scipy.interpolate import interpolate as interp
 from configparser import ConfigParser
 from pathlib import Path
+from joblib import Parallel, delayed
 
-import ligo.em_bright.lightcurves.lightcurve_utils as em_bright
+import ligo.em_bright.lightcurves.lightcurve_utils as em_bright_utils
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019, KrFo2019
+#from gwemlightcurves.EOS.EOS4ParameterPiecewisePolytrope import EOS4ParameterPiecewisePolytrope
+from EOS4ParameterPiecewisePolytrope import EOS4ParameterPiecewisePolytrope
 
 # load configs
 rel_path = 'etc/conf.ini'
@@ -21,14 +27,15 @@ conf_path = Path(__file__).parents[3] / rel_path
 config = ConfigParser()
 config.read(conf_path)
 fix_seed = config.get('lightcurve_configs', 'fix_seed')
-if fix_seed:
+if fix_seed == 'True':
     np.random.seed(0)
 
 # load posterior
-draws = em_bright.load_eos_posterior()
+draws = em_bright_utils.load_eos_posterior()
 # load ejecta configs
 ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
 N_eos = ejecta_model['N_eos']
+eosname = ejecta_model['eosname']
 # load lightcurve configs
 lightcurve_model = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
@@ -45,13 +52,19 @@ with open(model_path / lbol_model, 'rb') as f:
 # time for meta data
 date_time = time.strftime('%Y%m%d-%H%M%S')
 
+# ADD TO CONFIG?
+N_cores = 10
+downsample = True
+downsample = False
 
-def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
-                           mass_dist=None, mass_draws=None, N_eos=N_eos):
+def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
+                           thetas=None, mass_dist=None, mass_draws=None,
+                           N_eos=N_eos, N_cores=N_cores):
     '''
     Main function to carry out ejecta quantity and lightcurve
-    predictions. Needs either: m1, m2, and theta OR
+    predictions. Needs either: m1 and m2 OR
     mass_dist and mass draws. Both need the N_eos argument.
+    If thetas are not provided they are randomly chosen.
 
     Parameters
     ----------
@@ -59,6 +72,9 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
         more massive component masses in solar masses
     m2s: numpy array
         less massive component masses in solar masses
+    distances: numpy array
+        luminosity distance, only provide if masses in 
+        detector frame, units of Mpc
     thetas: numpy array
         inclination angles in radians
     mass_dist: str
@@ -80,27 +96,74 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
         meta data describing lightcurve calculation
     '''
 
+    # function in utils??
+    # shift masses to source frame if distances provided
+    shift_distances = True
+    try:
+        if distances == None:
+            shift_distances = False
+    except ValueError: pass
+    if shift_distances:
+        print('Shifting masses using passed distances')
+        distances = Distance(distances, u.Mpc)
+        z = distances.compute_z(Planck18)
+        m1s = m1s/(1+z)
+        m2s = m2s/(1+z)
+
     # draw masses from dist
     if mass_dist:
         m1s, m2s = initial_mass_draws(mass_dist, mass_draws)
-        thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
-        idx_thetas = np.where(thetas > 90.)[0]
-        thetas[idx_thetas] = 180. - thetas[idx_thetas]
+
+    # draw thetas if needed
+    try: 
+        if thetas == None:
+            print('Generating random thetas')
+            thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
+    except ValueError: pass
+
+    idx_thetas = np.where(thetas > 90.)[0]
+    thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
     lightcurve_data = []
     all_eos_metadata = []
-    for i, m1 in enumerate(m1s):
-        samples, eos_metadata = run_eos(m1, m2s[i], thetas[i],
+    if N_cores > 1:
+        print(f'running on {N_cores} cores')
+        print(m1s, m2s, thetas)
+        lightcurve_data, lightcurve_metadata, all_eos_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(lightcurve_calculations)(m1, m2s[i], thetas[i], N_eos) for i, m1 in enumerate(m1s)))
+    else:
+        print('running on one core')
+        #for i, m1 in enumerate(m1s):
+        #print(m1s, m2s, thetas)
+        for m1, m2, theta in zip(m1s, m2s, thetas):
+            #samples, eos_metadata = run_eos(m1, m2s[i], thetas[i],
+            #                            N_eos=N_eos, eos_draws=draws)
+            samples, eos_metadata = run_eos(m1, m2, theta,
                                         N_eos=N_eos, eos_draws=draws)
-        lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
-        lightcurve_data.append(lightcurves)
-        all_eos_metadata.append(eos_metadata)
+            lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
+            lightcurve_data.append(lightcurves)
+            all_eos_metadata.append(eos_metadata)
+    print('lc_data', lightcurve_data)
+    #if len(lightcurve_data) > 1:
     lightcurve_data = astropy.table.vstack(lightcurve_data)
-    eos_metadata = astropy.table.vstack(all_eos_metadata)
+    #eos_metadata = astropy.table.vstack(all_eos_metadata)
+    eos_metadata = all_eos_metadata
+    #lightcurve_metadata = lightcurve_metadata[0]
 
     sig_ejecta = lightcurve_data[lightcurve_data['mej'] > 1e-3]
     yields_ejecta = len(sig_ejecta)/len(lightcurve_data['mej'])
     return lightcurve_data, yields_ejecta, eos_metadata, lightcurve_metadata
+
+
+def lightcurve_calculations(m1, m2, theta, N_eos=N_eos, eos_draws=draws, N_cores=N_cores):
+    '''added to simplify parallel processing
+    '''
+    samples, eos_metadata = run_eos(m1, m2, theta,
+                                    N_eos=N_eos, eos_draws=draws)
+    if downsample: 
+        samples = samples.downsample(Nsamples=1000)
+    lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
+
+    return lightcurves, lightcurve_metadata, eos_metadata
 
 
 def find_percentiles(lightcurve_data):
@@ -190,6 +253,8 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     eos_metadata: astropy table object
         meta data describing eos draws
     '''
+
+    #if lightcurve_model['chi_eff'] == 'random':
 
     mchirp, eta, q = lightcurve_utils.ms2mc(m1, m2)
     model, chi_eff = lightcurve_model['model'], lightcurve_model['chi_eff']
@@ -325,10 +390,15 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
     eos_metadata = {'fix_seed': config.get('lightcurve_configs', 'fix_seed')}
     meta_indices = []
 
+    if eosname == 'SLy':
+        eos = EOS4ParameterPiecewisePolytrope('SLy')
+        indices = range(nsamples)
+
     # read Phil + Reed's eos files
     for ii, row in enumerate(samples):
-        indices = np.random.choice(len(eos_draws), size=nsamples)
-        meta_indices.append(indices)
+        if eosname == 'gp':
+            indices = np.random.choice(len(eos_draws), size=nsamples)
+            meta_indices.append(indices)
         for index in indices:
             lambda1, lambda2 = -1, -1
             mbns = -1
@@ -357,6 +427,10 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
                     lambda1, lambda2 = -1, -1
                     mbns = -1
 
+            if eosname == "SLy":
+                lambda1, lambda2 = eos.lambdaofm(row['m1']), eos.lambdaofm(row['m2'])
+                mbns = eos.maxmass()
+
             m1s.append(row['m1'])
             m2s.append(row['m2'])
             lambda1s.append(lambda1)
@@ -368,9 +442,11 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
             etas.append(row['eta'])
 
     eos_metadata['m1s'], eos_metadata['m2s'] = m1s, m2s
-    eos_metadata['eos_draw_indices'] = indices
     eos_metadata['mej_err'] = ejecta_model['mej_error']
     eos_metadata['N_eos'] = N_eos
+
+    if eosname == 'gp':
+        eos_metadata['eos_draw_indices'] = indices
 
     # create a new table including each eos draw for each
     # component mass pair, and new quantities
@@ -380,7 +456,6 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
                                    'theta', 'mbns', 'q', 'mchirp', 'eta'))
 
     return samples, eos_metadata
-
 
 def ejecta_to_lightcurve(samples):
     '''
