@@ -55,7 +55,7 @@ date_time = time.strftime('%Y%m%d-%H%M%S')
 # ADD TO CONFIG?
 N_cores = 10
 downsample = True
-downsample = False
+#downsample = False
 
 def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
                            thetas=None, mass_dist=None, mass_draws=None,
@@ -124,36 +124,48 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     idx_thetas = np.where(thetas > 90.)[0]
     thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
-    lightcurve_data = []
+    all_ejecta_data = []
     all_eos_metadata = []
+    for m1, m2, theta in zip(m1s, m2s, thetas):
+        samples, eos_metadata = run_eos(m1, m2, theta, N_eos=N_eos, eos_draws=draws)
+        all_ejecta_data.append(samples)
+        all_eos_metadata.append(eos_metadata)
+    all_ejecta_samples = astropy.table.vstack(all_ejecta_data)
+    all_eos_metadata = astropy.table.vstack(all_eos_metadata)
+
+    ejecta_samples = all_ejecta_samples
+    if downsample:
+        ejecta_samples = ejecta_samples.downsample(Nsamples=500)
+
+    phis = 45 * np.ones(len(ejecta_samples))
+    ejecta_samples['phi'] = phis
+
     if N_cores > 1:
         print(f'running on {N_cores} cores')
-        print(m1s, m2s, thetas)
-        lightcurve_data, lightcurve_metadata, all_eos_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(lightcurve_calculations)(m1, m2s[i], thetas[i], N_eos) for i, m1 in enumerate(m1s)))
+        N_samples = len(ejecta_samples)
+        N_per_core = int(N_samples/N_cores)
+        sample_split = []
+        for k in range(N_per_core, N_samples, N_per_core):
+            sample_split.append(ejecta_samples[(k-N_per_core):k])
+        if k < N_samples:
+            sample_split.append(ejecta_samples[k:N_samples])
+        lightcurve_data, lightcurve_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(ejecta_to_lightcurve)(sample) for sample in sample_split))    
+
     else:
+        lightcurve_data = []
         print('running on one core')
-        #for i, m1 in enumerate(m1s):
-        #print(m1s, m2s, thetas)
-        for m1, m2, theta in zip(m1s, m2s, thetas):
-            #samples, eos_metadata = run_eos(m1, m2s[i], thetas[i],
-            #                            N_eos=N_eos, eos_draws=draws)
-            samples, eos_metadata = run_eos(m1, m2, theta,
-                                        N_eos=N_eos, eos_draws=draws)
-            lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
+        for sample in ejecta_samples:
+            lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
             lightcurve_data.append(lightcurves)
-            all_eos_metadata.append(eos_metadata)
-    print('lc_data', lightcurve_data)
-    #if len(lightcurve_data) > 1:
-    lightcurve_data = astropy.table.vstack(lightcurve_data)
-    #eos_metadata = astropy.table.vstack(all_eos_metadata)
-    eos_metadata = all_eos_metadata
-    #lightcurve_metadata = lightcurve_metadata[0]
+    
+    lightcurve_samples = astropy.table.vstack(lightcurve_data)
 
-    sig_ejecta = lightcurve_data[lightcurve_data['mej'] > 1e-3]
-    yields_ejecta = len(sig_ejecta)/len(lightcurve_data['mej'])
-    return lightcurve_data, yields_ejecta, eos_metadata, lightcurve_metadata
+    sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
+    yields_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
+    return lightcurve_samples, all_ejecta_samples, yields_ejecta, all_eos_metadata, lightcurve_metadata
 
 
+# delete
 def lightcurve_calculations(m1, m2, theta, N_eos=N_eos, eos_draws=draws, N_cores=N_cores):
     '''added to simplify parallel processing
     '''
@@ -476,9 +488,9 @@ def ejecta_to_lightcurve(samples):
         meta data describing lightcurve calculation
     '''
 
-    num_samples = len(samples)
-    phis = 45 * np.ones(num_samples)
-    samples['phi'] = phis
+    #num_samples = len(samples)
+    #phis = 45 * np.ones(num_samples)
+    #samples['phi'] = phis
 
     # intitial time, final time, and timestep for lightcurve calculation
     lightcurve_model = eval(config.get('lightcurve_configs',
