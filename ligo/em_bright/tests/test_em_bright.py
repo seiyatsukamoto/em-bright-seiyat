@@ -7,8 +7,9 @@ import pandas as pd
 
 import pytest
 from unittest.mock import Mock
+from scipy.interpolate import interp1d
 
-from .. import em_bright, categorize, EOS_MAX_MASS
+from .. import em_bright, categorize, utils, EOS_MAX_MASS
 
 
 def test_version():
@@ -17,40 +18,40 @@ def test_version():
 
 
 @pytest.mark.parametrize(
-    'posteriors, dtype, result',
+    'posteriors, dtype, result, result_eos',
     [[[(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
       [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
        ('a_2', '<f8'), ('tilt_1', '<f8'), ('tilt_2', '<f8'),
        ('luminosity_distance', '<f8')],
-      (1.0, 1.0)],
+      (1.0, 1.0), (1.0, 0.5)],
      [[(1.2, 1.0, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 150.0)],
       [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
        ('a_2', '<f8'), ('luminosity_distance', '<f8')],
-      (1.0, 1.0)],
+      (1.0, 1.0), (1.0, 0.5)],
      [[(1.4, 1.4, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 150.0)],
       [('mass_1', '<f8'), ('mass_2', '<f8'), ('a_1', '<f8'),
        ('a_2', '<f8'), ('luminosity_distance', '<f8')],
-      (1.0, 1.0)],
+      (1.0, 1.0), (1.0, 1.0)],
      [[(1.4, 1.4, 100.0),
        (2.0, 0.5, 150.0)],
       [('mass_1', '<f8'), ('mass_2', '<f8'), ('luminosity_distance', '<f8')],
-      (1.0, 1.0)],
+      (1.0, 1.0), (1.0, 1.0)],
      [[(1.4, 1.4, 1.4, 1.4, 0.0, 0.0, 100.0),
        (2.0, 0.5, 2.0, 0.5, 0.99, 0.99, 150.0)],
       [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
        ('mass_1', '<f8'), ('mass_2', '<f8'), ('a_1', '<f8'),
        ('a_2', '<f8'), ('luminosity_distance', '<f8')],
-      (1.0, 1.0)],
+      (1.0, 1.0), (1.0, 1.0)],
      [[(4.5, -0.1, 200.0, 100000, 1.4, 1.4),
        (1.6, 0.3, 201.0, 100000, 1.5, 1.3)],
      [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
       ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8')],
-     (1.0, 1.0)]]
+     (1.0, 1.0), (1.0, 1.0)]]
 )
-def test_source_classification_pe(posteriors, dtype, result):
+def test_source_classification_pe(posteriors, dtype, result, result_eos):
     """Test em_bright classification from posterior
     samples - both aligned and precessing cases.
     """
@@ -66,7 +67,10 @@ def test_source_classification_pe(posteriors, dtype, result):
                 data=data
             )
         r = em_bright.source_classification_pe(filename)
+        r_eos = em_bright.source_classification_pe(filename, num_eos_draws=5,
+                                                   eos_seed=0)
     assert r == result
+    assert r_eos == result_eos
 
 
 @pytest.mark.parametrize(
@@ -122,6 +126,26 @@ def test_compute_disk_mass(m1, m2, chi1, chi2,
     has_remnant = em_bright.computeDiskMass.computeDiskMass(
         m1, m2, chi1, chi2, eosname=eosname
     ) > 0.
+    assert has_remnant == non_zero_remnant
+
+
+@pytest.mark.parametrize(
+    'm1,m2,chi1,chi2,non_zero_remnant',
+    [[1.4, 1.4, 0., 0., 1.0],
+     [50, 50., 0., 0., 0.]]
+)
+def test_compute_disk_mass_eos_marginalization(m1, m2, chi1, chi2,
+                                               non_zero_remnant):
+    np.random.seed(1)
+    num_eos_draws = 1
+    ALL_EOS_DRAWS = utils.load_eos_posterior()
+    rand_subset = np.random.choice(
+        len(ALL_EOS_DRAWS), num_eos_draws if num_eos_draws < len(ALL_EOS_DRAWS) else len(ALL_EOS_DRAWS))  # noqa:E501
+    subset_draws = ALL_EOS_DRAWS[rand_subset]
+    M, R = subset_draws['M'], subset_draws['R']
+    max_mass = np.max(M)
+    mass_radius_relation = interp1d(M[0], R[0], bounds_error=False)
+    has_remnant = em_bright.computeDiskMass.computeDiskMass(m1, m2, chi1, chi2, eosname=mass_radius_relation, max_mass=max_mass)  # noqa:E501
     assert has_remnant == non_zero_remnant
 
 

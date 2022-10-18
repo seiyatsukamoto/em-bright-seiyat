@@ -2,7 +2,6 @@
 compact binaries using trained supervised classifier
 """
 import h5py
-
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import cosmology, units as u
@@ -14,6 +13,7 @@ from . import (
     utils
 )
 
+ALL_EOS_DRAWS = utils.load_eos_posterior()
 
 _classifiers = {
     eos: utils._open_and_return_clfs(
@@ -143,7 +143,8 @@ def get_redshifts(distances, N=10000):
     return redshifts
 
 
-def source_classification_pe(posterior_samples_file, threshold=3.0):
+def source_classification_pe(posterior_samples_file, threshold=3.0,
+                             num_eos_draws=None, eos_seed=None):
     """
     Compute ``HasNS`` and ``HasRemnant`` probabilities from posterior
     samples.
@@ -155,6 +156,13 @@ def source_classification_pe(posterior_samples_file, threshold=3.0):
 
     threshold : float, optional
         Maximum neutron star mass for `HasNS` computation
+
+    num_eos_draws : int
+        providing an int here runs eos marginalization
+        with the value determining how many eos's to draw
+
+    eos_seed : int
+        seed for random eos draws
 
     Returns
     -------
@@ -191,8 +199,27 @@ def source_classification_pe(posterior_samples_file, threshold=3.0):
     except ValueError:
         a_1, a_2 = np.zeros(len(mass_1)), np.zeros(len(mass_2))
 
-    M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2)
-    prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
-    prediction_em = np.sum(M_rem > 0)/len(M_rem)
+    if num_eos_draws:
+        np.random.seed(eos_seed)
+        prediction_nss, prediction_ems = [], []
+        for m1, m2, a1, a2 in zip(mass_1, mass_2, a_1, a_2):
+            rand_subset = np.random.choice(
+                len(ALL_EOS_DRAWS), num_eos_draws if num_eos_draws < len(ALL_EOS_DRAWS) else len(ALL_EOS_DRAWS))  # noqa:E501
+            subset_draws = ALL_EOS_DRAWS[rand_subset]
+            M, R = subset_draws['M'], subset_draws['R']
+            max_masses = np.max(M, axis=1)
+            f_M = [interp1d(m, r, bounds_error=False) for m, r in zip(M, R)]
+            for mass_radius_relation, max_mass in zip(f_M, max_masses):
+                M_rem = computeDiskMass.computeDiskMass(m1, m2, a1, a2, eosname=mass_radius_relation, max_mass=max_mass)  # noqa:E501
+                prediction_nss.append(1. if m2 <= max_mass else 0.)
+                prediction_ems.append(1. if M_rem > 0 else 0.)
+
+        prediction_ns = np.mean(prediction_nss)
+        prediction_em = np.mean(prediction_ems)
+
+    else:
+        M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2)
+        prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
+        prediction_em = np.sum(M_rem > 0)/len(M_rem)
 
     return prediction_ns, prediction_em

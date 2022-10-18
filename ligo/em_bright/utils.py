@@ -19,6 +19,7 @@ import os
 import pickle
 import re
 
+import h5py
 from argparse import ArgumentParser
 from configparser import ConfigParser
 import glob
@@ -31,6 +32,7 @@ from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 
 from . import (
+    PACKAGE_FILENAMES,
     EOS_MAX_MASS,
     EOS_BAYES_FACTORS,
     computeDiskMass
@@ -355,6 +357,21 @@ def _create_param_sweep_plot(clf, category, prefix=None):
         plt.savefig(prefix+'_param_sweep_'+category+'.png')
     except TypeError:
         plt.savefig('param_sweep_'+category+'.png')
+
+
+def load_eos_posterior():
+    '''
+    Loads eos posterior draws (https://zenodo.org/record/6502467#.Yoa2EKjMI2z)
+
+    Returns
+    -------
+    draws: np.array
+        equally weighted eos draws from file
+    '''
+    eos_file = PACKAGE_FILENAMES['LCEHL_EOS_posterior_samples_PSR+GW_slice.h5']
+    with h5py.File(eos_file, 'r') as f:
+        draws = np.array(f['EOS'])
+    return draws
 
 
 def param_sweep_plot():

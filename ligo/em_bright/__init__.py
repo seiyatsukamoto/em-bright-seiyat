@@ -47,6 +47,8 @@ PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
     'EOS_MAX_MASS_MAP.json',
 )}
 
+PACKAGE_DATA_LINKS['EOS_POSTERIORS'] = 'https://git.ligo.org/andrew.toivonen/em-bright/-/raw/disk-mass/ligo/em_bright/data/LCEHL_EOS_posterior_samples_PSR+GW_slice.h5'  # noqa:E501
+
 
 def _download_data_file(url):
     """Download a single file.

@@ -24,3 +24,4 @@ ligo/em_bright/data/SKOP.pickle filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/SK272.pickle filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/EOS_BAYES_FACTOR_MAP.json filter=lfs diff=lfs merge=lfs -text
 ligo/em_bright/data/EOS_MAX_MASS_MAP.json filter=lfs diff=lfs merge=lfs -text
+ligo/em_bright/data/EOS_POSTERIOR_DRAWS.h5 filter=lfs diff=lfs merge=lfs -text
