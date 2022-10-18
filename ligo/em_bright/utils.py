@@ -17,8 +17,10 @@
 
 import os
 import pickle
+from pathlib import Path
 import re
 
+import h5py
 from argparse import ArgumentParser
 from configparser import ConfigParser
 import glob
@@ -355,6 +357,22 @@ def _create_param_sweep_plot(clf, category, prefix=None):
         plt.savefig(prefix+'_param_sweep_'+category+'.png')
     except TypeError:
         plt.savefig('param_sweep_'+category+'.png')
+
+
+def load_eos_posterior():
+    '''
+    loads eos posterior draws (https://zenodo.org/record/6502467#.Yoa2EKjMI2z)
+
+    Returns
+    -------
+    draws: np.array
+        equally weighted eos draws from file
+    '''
+    rel_path = 'data/LCEHL_EOS_posterior_samples_PSR+GW_slice.h5'
+    eos_path = Path(__file__).parents[0] / rel_path
+    with h5py.File(eos_path, 'r') as f:
+        draws = np.array(f['EOS'])
+    return draws
 
 
 def param_sweep_plot():

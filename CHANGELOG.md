@@ -3,6 +3,7 @@
 ## [1.0.5] - Unreleased
 
 - Fix typo in redshift function
+- add an EoS marginalization option to source_classification_pe
 
 ## [1.0.4] - 2022-10-19
 

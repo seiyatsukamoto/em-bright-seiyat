@@ -2,7 +2,7 @@ import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from scipy.optimize import fsolve
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, interp1d
 
 import lal
 import lalsimulation as lalsim
@@ -106,6 +106,10 @@ def computeCompactness(M_ns, eosname='2H', R_ns=None,
     [0.193, 2.362, 2.5]
     '''
     if R_ns:
+        C_ns, m2_b = _compactness_baryon_mass(M_ns, R_ns)
+    elif isinstance(eosname, interp1d):
+        # find R as a function of M
+        R_ns = eosname(M_ns)
         C_ns, m2_b = _compactness_baryon_mass(M_ns, R_ns)
     elif eosname != '2H':
         # infer radius and maximum mass based on lalsimulation EoS
