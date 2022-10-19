@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - Unreleased
+
+- No changes yet
+
 ## [1.0.4] - 2022-10-19
 
 - Update source_classification_pe to be compatible with bilby online
