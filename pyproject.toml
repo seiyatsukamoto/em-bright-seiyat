@@ -2,6 +2,7 @@
 name = "ligo.em-bright"
 version = "1.0.3"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
+readme = "README.md"
 authors = [
     "Deep Chatterjee <deep.chatterjee@ligo.org>",
     "Shaon Ghosh <shaon.ghosh@ligo.org>"]
