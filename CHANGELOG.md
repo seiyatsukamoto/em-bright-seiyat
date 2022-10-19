@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.4] - unreleased
+## [1.0.4] - 2022-10-19
 
 - Update source_classification_pe to be compatible with bilby online
   PE format. Deprecate previous LALInference format. This fixes
