@@ -2,9 +2,10 @@
 
 ## [1.0.4] - unreleased
 
-- update source_classification_pe to be compatible with bilby online
+- Update source_classification_pe to be compatible with bilby online
   PE format. Deprecate previous LALInference format. This fixes
-  KeyError seen in emfollow/gwcelery#475
+  KeyError seen in emfollow/gwcelery#475.
+- Use ThreadPoolExecutor to download data files in parallel.
 
 ## [1.0.3] - 2022-09-07
 
