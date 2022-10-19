@@ -26,15 +26,15 @@ assert set(_classifiers) == set(EOS_BAYES_FACTORS), "Inconsistency in"
 " number of trained classifiers."
 
 
-def mchirp(m1, m2):
-    return (m1 * m2)**(3./5.)/(m1 + m2)**(1./5.)
+def mchirp(mass_1, mass_2):
+    return (mass_1 * mass_2)**(3./5.)/(mass_1 + mass_2)**(1./5.)
 
 
-def q(m1, m2):
-    return m2/m1 if m2 < m1 else m1/m2
+def q(mass_1, mass_2):
+    return mass_2/mass_1 if mass_2 < mass_1 else mass_1/mass_2
 
 
-def source_classification(m1, m2, chi1, chi2, snr,
+def source_classification(mass_1, mass_2, chi1, chi2, snr,
                           ns_classifier=None,
                           emb_classifier=None):
     """
@@ -44,9 +44,9 @@ def source_classification(m1, m2, chi1, chi2, snr,
 
     Parameters
     ----------
-    m1 : float
+    mass_1 : float
         primary mass
-    m2 : float
+    mass_2 : float
         secondary mass
     chi1 : float
         dimensionless primary spin
@@ -84,7 +84,7 @@ def source_classification(m1, m2, chi1, chi2, snr,
     >>> em_bright.source_classification(2.0 ,1.0 ,0. ,0. ,10.0)
     (1.0, 1.0)
     """
-    features = [[m1, m2, chi1, chi2, snr]]
+    features = [[mass_1, mass_2, chi1, chi2, snr]]
     try:
         # custom classifiers supplied
         return (
@@ -143,8 +143,7 @@ def get_redshifts(distances, N=10000):
     return redshifts
 
 
-def source_classification_pe(posterior_samples_file, hdf5=True,
-                             threshold=3.0, sourceframe=True):
+def source_classification_pe(posterior_samples_file, threshold=3.0):
     """
     Compute ``HasNS`` and ``HasRemnant`` probabilities from posterior
     samples.
@@ -154,14 +153,8 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
     posterior_samples_file : str
         Posterior samples file
 
-    hdf5 : bool, optional
-        Supply when not using HDF5 format
-
     threshold : float, optional
         Maximum neutron star mass for `HasNS` computation
-
-    sourceframe : bool, optional
-        Supply to use detector frame quantities
 
     Returns
     -------
@@ -174,42 +167,32 @@ def source_classification_pe(posterior_samples_file, hdf5=True,
     >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification_pe('posterior_samples.hdf5')
     (1.0, 0.9616727412238634)
-    >>> em_bright.source_classification_pe('posterior_samples.dat', hdf5=False)  # noqa:E501
-    (0.0, 0.0)
     """
-    if hdf5:
-        with h5py.File(posterior_samples_file, 'r') as data:
-            engine = list(data['lalinference'].keys())[0]
-            samples = data['lalinference'][engine]['posterior_samples'][()]
-        mc_det_frame = samples['mc']
-        lum_dist = samples['dist']
-        redshifts = get_redshifts(lum_dist)
-        if sourceframe:
-            mc = mc_det_frame/(1 + redshifts)
-        else:
-            mc = mc_det_frame
-
-    else:
-        samples = np.recfromtxt(posterior_samples_file, names=True)
-        if sourceframe:
-            mc = samples['mc_source']
-        else:
-            mc = samples['mc']
-
-    q = samples['q']
-    m1 = mc * (1 + q)**(1/5) * (q)**(-3/5)
-    m2 = mc * (1 + q)**(1/5) * (q)**(2/5)
+    with h5py.File(posterior_samples_file, 'r') as data:
+        samples = data['posterior_samples'][()]
 
     try:
-        chi1 = samples['a1'] * np.cos(samples['tilt1'])
-        chi2 = samples['a2'] * np.cos(samples['tilt2'])
+        mass_1, mass_2 = samples['mass_1_source'], samples['mass_2_source']
     except ValueError:
-        # for aligned-spin PE, a1, a2 is the z component
-        chi1 = samples['a1']
-        chi2 = samples['a2']
+        lum_dist = samples['luminosity_distance']
+        redshifts = get_redshifts(lum_dist)
+        try:
+            mass_1, mass_2 = samples['mass_1'], samples['mass_2']
+            mass_1, mass_2 = mass_1/(1 + redshifts), mass_2/(1 + redshifts)
+        except ValueError:
+            chirp_mass, mass_ratio = samples['chirp_mass'], samples['mass_ratio']  # noqa:E501
+            chirp_mass = chirp_mass/(1 + redshifts)
+            mass_1 = chirp_mass * (1 + mass_ratio)**(1/5) * (mass_ratio)**(-3/5)  # noqa:E501
+            mass_2 = chirp_mass * (1 + mass_ratio)**(1/5) * (mass_ratio)**(2/5)
 
-    M_rem = computeDiskMass.computeDiskMass(m1, m2, chi1, chi2)
-    prediction_ns = np.sum(m2 <= threshold)/len(m2)
+    try:
+        a_1 = samples['a_1'] * np.cos(samples['tilt_1'])
+        a_2 = samples['a_2'] * np.cos(samples['tilt_2'])
+    except ValueError:
+        a_1, a_2 = np.zeros(len(mass_1)), np.zeros(len(mass_2))
+
+    M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2)
+    prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
     prediction_em = np.sum(M_rem > 0)/len(M_rem)
 
     return prediction_ns, prediction_em

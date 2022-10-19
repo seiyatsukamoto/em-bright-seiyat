@@ -2,7 +2,9 @@
 
 ## [1.0.4] - unreleased
 
-- No changes yet
+- update source_classification_pe to be compatible with bilby online
+  PE format. Deprecate previous LALInference format. This fixes
+  KeyError seen in emfollow/gwcelery#475
 
 ## [1.0.3] - 2022-09-07
 

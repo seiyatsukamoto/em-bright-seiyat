@@ -20,15 +20,35 @@ def test_version():
     'posteriors, dtype, result',
     [[[(1.2, 1.0, 0.0, 0.0, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 0.0, 0.0, 150.0)],
-      [('mc', '<f8'), ('q', '<f8'), ('a1', '<f8'),
-       ('a2', '<f8'), ('tilt1', '<f8'), ('tilt2', '<f8'),
-       ('dist', '<f8')],
+      [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
+       ('a_2', '<f8'), ('tilt_1', '<f8'), ('tilt_2', '<f8'),
+       ('luminosity_distance', '<f8')],
       (1.0, 1.0)],
      [[(1.2, 1.0, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 150.0)],
-      [('mc', '<f8'), ('q', '<f8'), ('a1', '<f8'),
-       ('a2', '<f8'), ('dist', '<f8')],
-      (1.0, 1.0)]]
+      [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
+       ('a_2', '<f8'), ('luminosity_distance', '<f8')],
+      (1.0, 1.0)],
+     [[(1.4, 1.4, 0.0, 0.0, 100.0),
+       (2.0, 0.5, 0.99, 0.99, 150.0)],
+      [('mass_1', '<f8'), ('mass_2', '<f8'), ('a_1', '<f8'),
+       ('a_2', '<f8'), ('luminosity_distance', '<f8')],
+      (1.0, 1.0)],
+     [[(1.4, 1.4, 100.0),
+       (2.0, 0.5, 150.0)],
+      [('mass_1', '<f8'), ('mass_2', '<f8'), ('luminosity_distance', '<f8')],
+      (1.0, 1.0)],
+     [[(1.4, 1.4, 1.4, 1.4, 0.0, 0.0, 100.0),
+       (2.0, 0.5, 2.0, 0.5, 0.99, 0.99, 150.0)],
+      [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
+       ('mass_1', '<f8'), ('mass_2', '<f8'), ('a_1', '<f8'),
+       ('a_2', '<f8'), ('luminosity_distance', '<f8')],
+      (1.0, 1.0)],
+     [[(4.5, -0.1, 200.0, 100000, 1.4, 1.4),
+       (1.6, 0.3, 201.0, 100000, 1.5, 1.3)],
+     [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
+      ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8')],
+     (1.0, 1.0)]]
 )
 def test_source_classification_pe(posteriors, dtype, result):
     """Test em_bright classification from posterior
@@ -42,7 +62,7 @@ def test_source_classification_pe(posteriors, dtype, result):
                 dtype=dtype
             )
             tmp_h5.create_dataset(
-                'lalinference/lalinference_mcmc/posterior_samples',
+                'posterior_samples',
                 data=data
             )
         r = em_bright.source_classification_pe(filename)
