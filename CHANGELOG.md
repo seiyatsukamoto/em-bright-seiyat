@@ -2,7 +2,7 @@
 
 ## [1.0.5] - Unreleased
 
-- No changes yet
+- Fix typo in redshift function
 
 ## [1.0.4] - 2022-10-19
 

@@ -136,7 +136,7 @@ def get_redshifts(distances, N=10000):
     max_dist = np.max(distances)
     z_min = cosmology.z_at_value(func=function, fval=min_dist*u.Mpc)
     z_max = cosmology.z_at_value(func=function, fval=max_dist*u.Mpc)
-    z_steps = np.linspace(z_min - (0.1*z_min), z_max + (0.1*z_min), N)
+    z_steps = np.linspace(z_min - (0.1*z_min), z_max + (0.1*z_max), N)
     lum_dists = cosmology.Planck15.luminosity_distance(z_steps)
     s = interp1d(lum_dists, z_steps)
     redshifts = s(distances)
