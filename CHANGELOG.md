@@ -3,7 +3,8 @@
 ## [1.0.5] - Unreleased
 
 - Fix typo in redshift function
-- add an EoS marginalization option to source_classification_pe
+- add an EoS marginalization option to source_classification_pe. Draws
+  are from Legred et al. (https://zenodo.org/record/6502467#.Y1xFdHbMI2z)
 
 ## [1.0.4] - 2022-10-19
 

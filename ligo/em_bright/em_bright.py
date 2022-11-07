@@ -157,6 +157,9 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
     threshold : float, optional
         Maximum neutron star mass for `HasNS` computation
 
+    eosname : str
+        Name of the equation of state to be used. `AP4`
+
     num_eos_draws : int
         providing an int here runs eos marginalization
         with the value determining how many eos's to draw
@@ -218,7 +221,7 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
         prediction_em = np.mean(prediction_ems)
 
     elif eosname:
-        M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2, eosname=eosname)  # noqa:E501
+        M_rem, threshold = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2, eosname=eosname)  # noqa:E501
         prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
         prediction_em = np.sum(M_rem > 0)/len(M_rem)
 
