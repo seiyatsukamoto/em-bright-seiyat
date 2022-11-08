@@ -159,20 +159,77 @@ def embright_categorization(inFile, outFile, eosname='2H', mNs_mass=None):
     return df_complete
 
 
+@_TupleHandler()
+def mass_gap_categorization(inFile, outFile):
+    '''Categorize whether the binary is in the lower mass gap
+    i.e., any component is between 3 and 5 solar mass
+
+    Parameters
+    ----------
+    inFile : str
+        input filename
+    outFile : str
+        output filename
+    '''
+    df = pd.read_table(inFile, delimiter='\t')
+    m1_inj, m1_rec = df.inj_m1.values, df.rec_m1.values
+    m2_inj, m2_rec = df.inj_m2.values, df.rec_m2.values
+    redshift_inj = df.inj_redshift.values
+    m1_inj_source = m1_inj / (1 + redshift_inj)
+    m2_inj_source = m2_inj / (1 + redshift_inj)
+
+    chi1_inj, chi1_rec = df.inj_spin1z.values, df.rec_spin1z.values
+    chi2_inj, chi2_rec = df.inj_spin2z.values, df.rec_spin2z.values
+    m1_inj, m2_inj, chi1_inj, chi2_inj = regularize(
+        m1_inj, m2_inj, chi1_inj, chi2_inj
+    )
+    m1_rec, m2_rec, chi1_rec, chi2_rec = regularize(
+        m1_rec, m2_rec, chi1_rec, chi2_rec
+    )
+    m1_inj_source, m2_inj_source, _, _ = regularize(
+        m1_inj_source, m2_inj_source, chi1_inj, chi2_inj
+    )  # spins regularized from previous step.
+    massgap_classified = (m1_inj_source > 3.0) & (m1_inj_source < 5.0)
+    massgap_classified += (m2_inj_source > 3.0) & (m2_inj_source < 5.0)
+    output = np.vstack(
+        (m1_inj_source, m2_inj_source, m1_inj, m2_inj, chi1_inj,
+         chi2_inj, redshift_inj, m1_rec, m2_rec, chi1_rec, chi2_rec,
+         df.cfar.values, df.snr.values, df.gpstime.values,
+         massgap_classified)
+    ).T
+
+    df_complete = pd.DataFrame(output, columns=[
+        'm1_inj_source', 'm2_inj_source', 'm1_inj', 'm2_inj', 'chi1_inj',
+        'chi2_inj', 'inj_redshift', 'm1_rec', 'm2_rec', 'chi1_rec',
+        'chi2_rec', 'cfar', 'snr', 'gpstime', 'mass_gap']
+    )
+    with open(outFile, 'wb') as f:
+        pickle.dump(df_complete, f)
+    return df_complete
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", action="store", type=str,
                         help="Name of the input file")
     parser.add_argument("-o", "--output", action="store", type=str,
                         help="Name of the output file")
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "-e", "--eosname", default='2H',
         help="Equation of state used compute remnant matter."
     )
+    group.add_argument(
+        "--mass-gap", required=False, action="store_true",
+        default=False, help="Supply for mass gap categorization")
+
     args = parser.parse_args()
 
-    embright_categorization(args.input, args.output,
-                            eosname=args.eosname)
+    if args.mass_gap:
+        mass_gap_categorization(args.input, args.output)
+    else:
+        embright_categorization(args.input, args.output,
+                                eosname=args.eosname)
 
 
 def main_all():

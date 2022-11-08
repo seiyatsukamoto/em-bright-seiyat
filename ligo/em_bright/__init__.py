@@ -13,11 +13,11 @@ from astropy.utils.data import (
 )
 
 __version__ = '1.0.5'
+
 PACKAGE_DATA_BASE_URL = (
     'https://git.ligo.org/emfollow/em-properties/em-bright/'
-    '-/raw/main/ligo/em_bright/data'
+    f'-/raw/v{__version__}/ligo/em_bright/data'
 )
-
 PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
     'equil_2H.dat',
     'APR4_EPP.pickle',
@@ -47,6 +47,7 @@ PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
     'EOS_MAX_MASS_MAP.json',
     'EOS_POSTERIOR_DRAWS.h5'
 )}
+PACKAGE_DATA_LINKS["MASS_GAP.pickle"] = 'https://git.ligo.org/sushant.sharma-chaudhary/em-bright-gp/-/raw/massgap/ligo/em_bright/data/MASS_GAP.pickle'  # noqa: E501
 
 
 def _download_data_file(url):

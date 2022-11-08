@@ -31,6 +31,7 @@ import pandas as pd
 from astropy.table import Column, Table, vstack
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 from . import (
     PACKAGE_FILENAMES,
@@ -206,9 +207,14 @@ def train():
     parser.add_argument(
         '-c', '--config', required=True,
         help='Config file with additional parameters')
+    parser.add_argument("--mass-gap", required=False, action="store_true",
+                        help="mode of categorization")
 
     args = parser.parse_args()
-
+    if args.mass_gap:
+        settings = 'massgap'
+    else:
+        settings = 'em_bright'
     config = ConfigParser()
     config.read(args.config)
     # compulsory sections in config
@@ -218,20 +224,20 @@ def train():
         'Config file must have sections %s' % (required_sections,)
 
     # get column names and values from config
-    feature_cols = config.get('em_bright',
+    feature_cols = config.get(settings,
                               'feature_cols').split(',')
-    category_cols = config.get('em_bright',
+    category_cols = config.get(settings,
                                'category_cols').split(',')
-    threshold_cols = config.get('em_bright',
+    threshold_cols = config.get(settings,
                                 'threshold_cols').split(',')
     all_cols = feature_cols + category_cols + threshold_cols
 
     threshold_values = map(
         eval, config.get(
-            'em_bright',
+            settings,
             'threshold_values').split(',')
         )
-    threshold_type = config.get('em_bright',
+    threshold_type = config.get(settings,
                                 'threshold_type').split(',')
     # read dataframe, check sanity
     with open(args.input, 'rb') as f:
@@ -247,50 +253,84 @@ def train():
                                threshold_type):
         mask &= df[col] < value if typ == 'lesser' else \
             df[col] > value if typ == 'greater' else True
+
     features = df[feature_cols][mask]
     targets = df[category_cols][mask]
-    # train Nearest Neighbor classifier for each category
-    clf_kwargs = eval(config.get('em_bright',
-                                 'clf_kwargs'))
-    if clf_kwargs.get('metric') == 'mahalanobis':
-        clf_kwargs['metric_params'] = dict(
-            V=features.cov().values
-        )  # covariance matrix needed for mahalanobis metric
-    clfs = []
-    for category, target_value in targets.iteritems():
-        # run KFold cross-validation
-        res_predict, res_predict_proba = run_k_fold_split(features,
-                                                          target_value,
-                                                          **clf_kwargs)
+
+    if not args.mass_gap:
+        clf_kwargs = eval(config.get('em_bright',
+                                     'clf_kwargs'))
+        if clf_kwargs.get('metric') == 'mahalanobis':
+            clf_kwargs['metric_params'] = dict(
+                V=features.cov().values
+            )  # covariance matrix needed for mahalanobis metric
+        clfs = []
+        for category, target_value in targets.iteritems():
+            # run KFold cross-validation
+            res_predict, res_predict_proba = run_k_fold_split(
+                features, target_value,
+                training_task=run_KNN_classifier,
+                **clf_kwargs)
+            test_results = pd.DataFrame(
+                np.vstack((features.T, target_value,
+                           res_predict, res_predict_proba)).T,
+                columns=feature_cols + ['targets', 'predict', 'predict_proba']
+            )
+            test_results_filename = 'cross-val-res-' + category + '.csv'
+            test_results.to_csv(test_results_filename, index=False)
+            # train on the full dataset
+            clf = KNeighborsClassifier(**clf_kwargs)
+            clf.fit(features, target_value)
+            if args.param_sweep_plot_prefix:
+                _create_param_sweep_plot(
+                    clf, category,
+                    args.param_sweep_plot_prefix
+                )
+            clfs.append(clf)
+        # append the output filename of the classifier
+        clfs.extend([args.output])
+        with open(args.output, 'wb') as f:
+            pickle.dump(clfs, f)
+    else:
+        # train random forest classifier for massgap category
+        clf_kwargs = eval(config.get('massgap',
+                                     'clf_kwargs'))
+        res_predict, res_predict_proba = run_k_fold_split(
+            features, targets,
+            training_task=run_RF_classifier, **clf_kwargs
+        )
         test_results = pd.DataFrame(
-            np.vstack((features.T, target_value,
+            np.vstack((features.T, targets.squeeze().T,
                        res_predict, res_predict_proba)).T,
             columns=feature_cols + ['targets', 'predict', 'predict_proba']
         )
-        test_results_filename = 'cross-val-res-' + category + '.csv'
+        test_results_filename = 'cross-val-res-' + 'mass-gap' + '.csv'
         test_results.to_csv(test_results_filename, index=False)
-        # train on the full dataset
-        clf = KNeighborsClassifier(**clf_kwargs)
-        clf.fit(features, target_value)
-        if args.param_sweep_plot_prefix:
-            _create_param_sweep_plot(
-                clf, category,
-                args.param_sweep_plot_prefix
-            )
-        clfs.append(clf)
-    # append the output filename of the classifier
-    clfs.extend([args.output])
-    with open(args.output, 'wb') as f:
-        pickle.dump(clfs, f)
+        clf = RandomForestClassifier(**clf_kwargs)
+        clf.fit(features, targets.squeeze())
+        _create_param_sweep_plot(
+            clf, 'mass_gap',
+            prefix='SLy'  # FIXME: ad-hoc prefix needed, not used for plotting
+        )
+        with open(args.output, 'wb') as f:
+            # append the filename of the classfier
+            pickle.dump([clf, args.output], f)
 
 
 def _open_and_return_clfs(filename):
     """Unpack pickle files storing classifier and return.
-    First return argument is HasNS, second HasRemnant
+    If two classifiers exist, assume first argument is HasNS,
+    second HasRemnant. If single classifier exists, then assume
+    mass_gap classifier.
     """
     with open(filename, 'rb') as f:
-        clf_ns, clf_em, _filename = pickle.load(f)
-    return clf_ns, clf_em
+        content = pickle.load(f)
+        try:
+            clf_ns, clf_em, _filename = content
+            return clf_ns, clf_em
+        except ValueError:
+            clf_mass_gap, _filename = content
+            return clf_mass_gap
 
 
 def _get_mass_grid():
@@ -313,7 +353,7 @@ def _get_param_sweep(clf):
     the predictions for the classifier sweeping across
     masses.
     """
-    if clf.metric == "mahalanobis":
+    if hasattr(clf, 'metric') and clf.metric == "mahalanobis":
         clf.n_jobs = 1  # issue with BallTree output
     t = _get_mass_grid()
     spins = Table(
@@ -500,11 +540,15 @@ def make_plots(features, predictions, title, fig_idx,
         rem_masses, mask=mask*(M2 > EOS_MAX_MASS[prefix])
     )
     CS = plt.contour(
-        M1, M2, Mc.T, levels=[2.22, 2.99, 4.73, 5, 6],
+        M1, M2, Mc.T, levels=[2.01, 2.22, 2.99, 3.48, 4.73, 5.4],
+        # (m1, m2) = (4, 1.4) -> Mc = 2.01
         # (m1, m2) = (5, 1.4) -> Mc = 2.22
         # (m1, m2) = (10, 1.4) -> Mc = 2.99
+        # (m1, m2) = (4, 4)    -> Mc = 3.48
         # (m1, m2) = (30, 1.4) -> Mc = 4.73
-        # three different NSBH populations; remaining values are ad-hoc
+        # (m1, m2) = (10, 4)  -> Mc = 5.4
+        # three different NSBH populations;
+        # three different mass-gap populations
         colors='black', linewidths=1.0
     )
     plt.clabel(CS, inline=True, fontsize=16)
@@ -525,7 +569,7 @@ def make_plots(features, predictions, title, fig_idx,
 
 
 def run_k_fold_split(features, targets, n_splits=10, random_state=0,
-                     **kwargs):
+                     training_task=None, **kwargs):
     """Split the `features` in `n_splits`, train on `n_splits - 1`
     sets, test on the last fraction. This performed across the complete
     dataset.
@@ -539,9 +583,14 @@ def run_k_fold_split(features, targets, n_splits=10, random_state=0,
     n_splits : int
         Number of splits for `features` and `targets`
     random_state : int
-        Random seef for the split
+        Random seed for the split
+    training_task : callable
+        function with arguments (X_train, y_train, X_test, **kwargs) which
+        trains, and returns predictions on X_test.
+        E.g. :meth:`run_KNN_classifier`,
+        or :meth:`run_RF_classifier`.
     **kwargs
-        Keyword arguments passed to `KNearestNeighborClassifier`
+        Keyword arguments passed to `training_task`.
 
     Returns
     -------
@@ -561,8 +610,8 @@ def run_k_fold_split(features, targets, n_splits=10, random_state=0,
             features.iloc[test_index], \
             targets.iloc[train_index]
 
-        predict_proba, predict = run_KNN_classifier(X_train, y_train, X_test,
-                                                    **kwargs)
+        predict_proba, predict = training_task(X_train, y_train, X_test,
+                                               **kwargs)
         # second column is the prob of NS/EMB
         predict_proba = predict_proba.T[1]
 
@@ -590,6 +639,28 @@ def run_KNN_classifier(X_train, y_train,
     if kwargs.get('metric') == 'mahalanobis':
         kwargs['n_jobs'] = 1  # issue with KDTree, BallTree with n_jobs > 1
     clf = KNeighborsClassifier(**kwargs)
+    clf.fit(X_train, y_train)
+    predictions_proba = clf.predict_proba(X_test)
+    predict = clf.predict(X_test)
+    return predictions_proba, predict
+
+
+def run_RF_classifier(X_train, y_train, X_test,
+                      **kwargs):
+    '''
+    Run RandomForestClassifier; returns
+    `clf.predict_proba`
+
+    Parameters
+    ----------
+    X_train : numpy.ndarray
+        Feature training set, can be array or Dataframe
+    y_train : numpy.array
+        Target training set, 0 or 1 binary classification
+    X_test : numpy.ndarray
+        Feature testing set, can be array or DataFrame
+    '''
+    clf = RandomForestClassifier(**kwargs)
     clf.fit(X_train, y_train)
     predictions_proba = clf.predict_proba(X_test)
     predict = clf.predict(X_test)

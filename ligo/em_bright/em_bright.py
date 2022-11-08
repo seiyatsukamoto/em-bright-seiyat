@@ -25,6 +25,10 @@ _classifiers = {
 assert set(_classifiers) == set(EOS_BAYES_FACTORS), "Inconsistency in"
 " number of trained classifiers."
 
+_massgap_classifier = utils._open_and_return_clfs(
+        PACKAGE_FILENAMES['MASS_GAP.pickle']
+    )
+
 
 def mchirp(mass_1, mass_2):
     return (mass_1 * mass_2)**(3./5.)/(mass_1 + mass_2)**(1./5.)
@@ -36,11 +40,12 @@ def q(mass_1, mass_2):
 
 def source_classification(mass_1, mass_2, chi1, chi2, snr,
                           ns_classifier=None,
-                          emb_classifier=None):
+                          emb_classifier=None,
+                          massgap_classifier=None):
     """
-    Computes ``HasNS`` and ``HasRemnant`` probabilities
-    from point mass, spin and signal to noise ratio
-    estimates.
+    Computes ``HasNS``, ``HasRemnant``, and ``MassGap``
+    probabilities from point mass, spin and
+    signal to noise ratio estimates.
 
     Parameters
     ----------
@@ -58,18 +63,19 @@ def source_classification(mass_1, mass_2, chi1, chi2, snr,
         pickled object for NS classification
     emb_classifier : object, optional
         pickled object for EM brightness classification
+    massgap_classifier : object, optional
+        pickled object for EM brightness classification
 
     Returns
     -------
     tuple
-        (P_NS, P_EMB) predicted values.
-
+        (HasNS, HasRemnant, HasMassGap) predicted values.
     Notes
     -----
     By default the classifiers, trained based
     on different nuclear equations of state (EoSs)
     are downloaded from the project page:
-    https://git.ligo.org/deep.chatterjee/em-bright.
+    https://git.ligo.org/emfollow/em-properties/em-bright.
     The methodology is described in arXiv:1911.00116.
     The score from each classifier is weighted based on
     the bayes factors of individual EoSs as mentioned in
@@ -82,14 +88,15 @@ def source_classification(mass_1, mass_2, chi1, chi2, snr,
     --------
     >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification(2.0 ,1.0 ,0. ,0. ,10.0)
-    (1.0, 1.0)
+    (1.0, 1.0, 0.0)
     """
     features = [[mass_1, mass_2, chi1, chi2, snr]]
     try:
         # custom classifiers supplied
         return (
             ns_classifier.predict_proba(features).T[1][0],
-            emb_classifier.predict_proba(features).T[1][0]
+            emb_classifier.predict_proba(features).T[1][0],
+            massgap_classifier.predict_proba(features).T[1][0]
         )
     except AttributeError as e:
         msg, *_ = e.args
@@ -103,7 +110,8 @@ def source_classification(mass_1, mass_2, chi1, chi2, snr,
             features).T[1][0] * bayes_factor
         reweighted_emb_score += emb_classifier.predict_proba(
             features).T[1][0] * bayes_factor
-    return reweighted_ns_score, reweighted_emb_score
+    massgap_score = _massgap_classifier.predict_proba(features).T[1][0]
+    return reweighted_ns_score, reweighted_emb_score, massgap_score
 
 
 def get_redshifts(distances, N=10000):
@@ -146,8 +154,8 @@ def get_redshifts(distances, N=10000):
 def source_classification_pe(posterior_samples_file, threshold=3.0,
                              num_eos_draws=None, eos_seed=None):
     """
-    Compute ``HasNS`` and ``HasRemnant`` probabilities from posterior
-    samples.
+    Compute ``HasNS``, ``HasRemnant``, and ``HasMassGap`` probabilities
+    from posterior samples.
 
     Parameters
     ----------
@@ -167,14 +175,14 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
     Returns
     -------
     tuple
-        (P_NS, P_EMB) predicted values.
+        (HasNS, HasRemnant, HasMassGap) predicted values.
 
 
     Examples
     --------
     >>> from ligo.em_bright import em_bright
     >>> em_bright.source_classification_pe('posterior_samples.hdf5')
-    (1.0, 0.9616727412238634)
+    (1.0, 0.96, 0.0)
     """
     with h5py.File(posterior_samples_file, 'r') as data:
         samples = data['posterior_samples'][()]
@@ -222,4 +230,8 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
         prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
         prediction_em = np.sum(M_rem > 0)/len(M_rem)
 
-    return prediction_ns, prediction_em
+    prediction_mg = (mass_1 <= 5) & (mass_1 >= 3)
+    prediction_mg += (mass_2 <= 5) & (mass_2 >= 3)
+    prediction_mg = np.sum(prediction_mg)/len(mass_1)
+
+    return prediction_ns, prediction_em, prediction_mg
