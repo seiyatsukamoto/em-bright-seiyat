@@ -3,6 +3,7 @@
 ## [1.0.5] - Unreleased
 
 - Fix typo in redshift function
+- Update to sklearn v1.1.3
 
 ## [1.0.4] - 2022-10-19
 
