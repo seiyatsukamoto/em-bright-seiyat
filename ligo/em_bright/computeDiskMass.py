@@ -288,4 +288,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     if type(BNS) == np.ndarray:
         M_rem[BBH] = 0.0  # BBH is always EM-Dark
         M_rem[BNS] = 1.0  # Ad hoc value, assuming BNS is always EM-Bright
-    return M_rem
+    if eosname != '2H' and not isinstance(eosname, interp1d):
+        return M_rem, max_mass
+    else:
+        return M_rem
