@@ -10,6 +10,7 @@ from astropy.cosmology import Planck18
 from astropy.coordinates import Distance
 from astropy import units as u
 from scipy.interpolate import interpolate as interp
+import scipy.stats
 from configparser import ConfigParser
 from pathlib import Path
 from joblib import Parallel, delayed
@@ -110,6 +111,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
         m1s = m1s/(1+z)
         m2s = m2s/(1+z)
 
+    # sort masses???
+
     # draw masses from dist
     if mass_dist:
         m1s, m2s = initial_mass_draws(mass_dist, mass_draws)
@@ -118,7 +121,11 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     try: 
         if thetas == None:
             print('Generating random thetas')
-            thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
+            farah_thetas = np.loadtxt('farah_thetas.txt')
+            kde = scipy.stats.gaussian_kde(farah_thetas)
+            # len m1 may fail is m1 is passed as float
+            thetas = kde.resample(size=len(m1s))[0]
+            #thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
     except ValueError: pass
 
     idx_thetas = np.where(thetas > 90.)[0]
@@ -135,7 +142,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     ejecta_samples = all_ejecta_samples
     if downsample:
-        ejecta_samples = ejecta_samples.downsample(Nsamples=500)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=2000)
+        #ejecta_samples = ejecta_samples.downsample(Nsamples=20)
 
     phis = 45 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
@@ -180,7 +188,7 @@ def lightcurve_calculations(m1, m2, theta, N_eos=N_eos, eos_draws=draws, N_cores
 
 def find_percentiles(lightcurve_data):
     '''
-    Function to find 10th, 50th, and 90th percentiles
+    Function to find 5th, 50th, and 95th percentiles
     for mass ejecta and magnitude bands
 
     Parameters
@@ -191,23 +199,31 @@ def find_percentiles(lightcurve_data):
     Returns
     -------
     percentiles: dictionary
-        10th, 50th, 90th percentiles of mass ejecta and magnitude bands
+        5th, 50th, 95th percentiles of mass ejecta and magnitude bands
     '''
-    mej = lightcurve_data['mej']
-    mags = lightcurve_data['mag']
+    #mej = lightcurve_data['mej']
+    #mags = lightcurve_data['mag']
     percentiles = {}
-    percentile_list = [10, 50, 90]
-    peak_mags = {}
-    bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
-    # find peak mag for each mag in each lightcurve
-    for i, band in enumerate(bands):
-        peaks = []
-        lightcurves = mags[:, i, :]
-        for lightcurve in lightcurves:
-            peaks.append(np.nanmin(lightcurve))
-        peak_mags[band] = peaks
-        percentiles[band] = np.nanpercentile(peaks, percentile_list)
-    percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    # 5th, 50th, 95th??
+    percentile_list = [5, 50, 95]
+    try:
+        mej = lightcurve_data['mej']
+        percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    except: pass
+    try:
+        mags = lightcurve_data['mag']
+        peak_mags = {}
+        bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
+        # find peak mag for each mag in each lightcurve
+        for i, band in enumerate(bands):
+            peaks = []
+            lightcurves = mags[:, i, :]
+            for lightcurve in lightcurves:
+                peaks.append(np.nanmin(lightcurve))
+            peak_mags[band] = peaks
+            percentiles[band] = np.nanpercentile(peaks, percentile_list)
+    except: pass
+    #percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
     return percentiles
 
 
