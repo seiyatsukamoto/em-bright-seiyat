@@ -4,12 +4,12 @@
 
 - Fix typo in redshift function
 - Update to sklearn v1.1.3
-- add an EoS marginalization option to source_classification_pe. Draws
-  are from Legred et al. (https://zenodo.org/record/6502467#.Y1xFdHbMI2z)
+- add an EoS marginalization option to `source_classification_pe`. EoS
+  posterior draws are from Legred et al. (https://zenodo.org/record/6502467#.Y1xFdHbMI2z)
 
 ## [1.0.4] - 2022-10-19
 
-- Update source_classification_pe to be compatible with bilby online
+- Update `source_classification_pe` to be compatible with bilby online
   PE format. Deprecate previous LALInference format. This fixes
   KeyError seen in emfollow/gwcelery#475.
 - Use ThreadPoolExecutor to download data files in parallel.
