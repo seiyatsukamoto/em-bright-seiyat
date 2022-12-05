@@ -1,4 +1,5 @@
 # Copyright (C) 2018-2021 Shaon Ghosh, Shasvath Kapadia, Deep Chatterjee
+# 2021-2022 Andrew Toivonen
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -368,7 +369,7 @@ def load_eos_posterior():
     draws: np.array
         equally weighted eos draws from file
     '''
-    eos_file = PACKAGE_FILENAMES['LCEHL_EOS_posterior_samples_PSR+GW_slice.h5']
+    eos_file = PACKAGE_FILENAMES['EOS_POSTERIOR_DRAWS.h5']
     with h5py.File(eos_file, 'r') as f:
         draws = np.array(f['EOS'])
     return draws
