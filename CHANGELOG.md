@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - unreleased
+
+- no changes
+
 ## [1.0.5.dev0] - 2022-12-10
 
 - Fix typo in redshift function
