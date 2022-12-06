@@ -45,9 +45,8 @@ PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
     'SLy.pickle',
     'EOS_BAYES_FACTOR_MAP.json',
     'EOS_MAX_MASS_MAP.json',
+    'EOS_POSTERIOR_DRAWS.h5'
 )}
-
-PACKAGE_DATA_LINKS['EOS_POSTERIOR_DRAWS.h5'] = 'https://git.ligo.org/andrew.toivonen/em-bright/-/raw/disk-mass/ligo/em_bright/data/EOS_POSTERIOR_DRAWS.h5'  # noqa:E501
 
 
 def _download_data_file(url):
