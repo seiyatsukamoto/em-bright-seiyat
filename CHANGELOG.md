@@ -1,11 +1,12 @@
 # Changelog
 
-## [1.0.5] - Unreleased
+## [1.0.5.dev0] - 2022-12-10
 
 - Fix typo in redshift function
 - Update to sklearn v1.1.3
 - add an EoS marginalization option to `source_classification_pe`. EoS
-  posterior draws are from Legred et al. (https://zenodo.org/record/6502467#.Y1xFdHbMI2z)
+  posterior draws are from Legred et al. (https://zenodo.org/record/6502467#.Y1xFdHbMI2z).
+  See https://git.ligo.org/emfollow/em-properties/em-bright/-/merge_requests/39
 
 ## [1.0.4] - 2022-10-19
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "1.0.4"
+version = "1.0.5.dev0"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 readme = "README.md"
 authors = [
