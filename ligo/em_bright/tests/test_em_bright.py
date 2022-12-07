@@ -54,12 +54,12 @@ def test_version():
        (1.6, 0.3, 201.0, 100000, 4.3, 4.2)],
      [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
       ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8')],
-     (0.0, 0.0, 1.0)],
+     (0.0, 0.0, 1.0), (0.0, 0.0, 1.0)],
      [[(4.5, -0.1, 200.0, 100000, 40.5, 4.4),
        (1.6, 0.3, 201.0, 100000, 40.3, 4.2)],
      [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
       ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8')],
-     (0.0, 0.0, 1.0)]]
+     (0.0, 0.0, 1.0), (0.0, 0.0, 1.0)]]
 )
 def test_source_classification_pe(posteriors, dtype, result, result_eos):
     """Test em_bright classification from posterior
