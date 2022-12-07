@@ -1,8 +1,10 @@
 # Changelog
 
-## [1.1.0] - unreleased
+## [1.1.0.dev1] - unreleased
 
-- no changes
+- add HasMassGap: em_bright.source_classification returns HasNS, HasRemnant, HasMassGap
+- modify dag_writer to add mass_gap training workflow, add classifiers
+- add HasMassGap unittests
 
 ## [1.0.5] - 2022-12-10
 
