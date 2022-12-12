@@ -46,9 +46,9 @@ PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
     'SLy.pickle',
     'EOS_BAYES_FACTOR_MAP.json',
     'EOS_MAX_MASS_MAP.json',
-    'EOS_POSTERIOR_DRAWS.h5'
+    'EOS_POSTERIOR_DRAWS.h5',
+    'MASS_GAP.pickle'
 )}
-PACKAGE_DATA_LINKS["MASS_GAP.pickle"] = 'https://git.ligo.org/sushant.sharma-chaudhary/em-bright-gp/-/raw/massgap/ligo/em_bright/data/MASS_GAP.pickle'  # noqa: E501
 
 
 def _download_data_file(url):
