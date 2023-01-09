@@ -43,6 +43,10 @@ with open(model_path / lbol_model, 'rb') as f:
 # time for meta data
 date_time = time.strftime('%Y%m%d-%H%M%S')
 
+# ADD TO CONFIG?
+N_cores = 10
+#downsample = True
+downsample = False
 
 def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
                            mass_dist=None, mass_draws=None, N_eos=50):
@@ -84,7 +88,24 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
         idx_thetas = np.where(thetas > 90.)[0]
         thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
-    lightcurve_data = []
+    # draw thetas if needed
+    try: 
+        if thetas == None:
+            print('Generating random thetas')
+            farah_thetas = np.loadtxt('farah_thetas.txt')
+            kde = scipy.stats.gaussian_kde(farah_thetas)
+            # len m1 may fail is m1 is passed as float
+            thetas = kde.resample(size=len(m1s))[0]
+            #thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
+    except ValueError: pass
+
+    idx_thetas = np.where(thetas > 90.)[0]
+    #print(idx_thetas)
+    #if idx_thetas:
+    #    print('Folding thetas')
+    thetas[idx_thetas] = 180. - thetas[idx_thetas]
+
+    all_ejecta_data = []
     all_eos_metadata = []
     for i, m1 in enumerate(m1s):
         samples, eos_metadata = run_eos(m1, m2s[i], thetas[i],
@@ -95,10 +116,100 @@ def lightcurve_predictions(m1s=None, m2s=None, thetas=None,
     lightcurve_data = astropy.table.vstack(lightcurve_data)
     eos_metadata = astropy.table.vstack(all_eos_metadata)
 
-    remnant = lightcurve_data[lightcurve_data['mej'] > 1e-3]
-    has_Remnant = len(remnant)/len(lightcurve_data['mej'])
+    ejecta_samples = all_ejecta_samples
+    if downsample:
+        #ejecta_samples = ejecta_samples.downsample(Nsamples=2000)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
-    return lightcurve_data, has_Remnant, eos_metadata, lightcurve_metadata
+    phis = 45 * np.ones(len(ejecta_samples))
+    ejecta_samples['phi'] = phis
+
+    if N_cores > 1:
+        print(f'running on {N_cores} cores')
+        N_samples = len(ejecta_samples)
+        N_per_core = int(N_samples/N_cores)
+        sample_split = []
+        for k in range(N_per_core, N_samples, N_per_core):
+            sample_split.append(ejecta_samples[(k-N_per_core):k])
+        if k < N_samples:
+            sample_split.append(ejecta_samples[k:N_samples])
+        lightcurve_data, lightcurve_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(ejecta_to_lightcurve)(sample) for sample in sample_split))    
+        lightcurve_samples = astropy.table.vstack(lightcurve_data)
+
+    elif len(ejecta_samples)==1:
+        lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
+
+    else:
+        lightcurve_data = []
+        print('running on one core')
+        print(len(ejecta_samples))
+        for sample in ejecta_samples:
+            print(sample)
+            #print(sample.dtype())
+            print('----------')
+            #print(ejecta_samples.dtype())
+            lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
+            lightcurve_data.append(lightcurves)
+            lightcurve_samples = astropy.table.vstack(lightcurve_data)
+    #lightcurve_samples = astropy.table.vstack(lightcurve_data)
+
+    sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
+    yields_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
+    return lightcurve_samples, all_ejecta_samples, yields_ejecta, all_eos_metadata, lightcurve_metadata
+
+
+# delete
+def lightcurve_calculations(m1, m2, theta, N_eos=N_eos, eos_draws=draws, N_cores=N_cores):
+    '''added to simplify parallel processing
+    '''
+    samples, eos_metadata = run_eos(m1, m2, theta,
+                                    N_eos=N_eos, eos_draws=draws)
+    if downsample: 
+        samples = samples.downsample(Nsamples=1000)
+    lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
+
+    return lightcurves, lightcurve_metadata, eos_metadata
+
+
+def find_percentiles(lightcurve_data):
+    '''
+    Function to find 5th, 50th, and 95th percentiles
+    for mass ejecta and magnitude bands
+
+    Parameters
+    ----------
+    lightcurve_data: KNTable object
+        ejecta quatities and lightcurves for various mag bands
+
+    Returns
+    -------
+    percentiles: dictionary
+        5th, 50th, 95th percentiles of mass ejecta and magnitude bands
+    '''
+    #mej = lightcurve_data['mej']
+    #mags = lightcurve_data['mag']
+    percentiles = {}
+    # 5th, 50th, 95th??
+    percentile_list = [5, 50, 95]
+    try:
+        mej = lightcurve_data['mej']
+        percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    except: pass
+    try:
+        mags = lightcurve_data['mag']
+        peak_mags = {}
+        bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
+        # find peak mag for each mag in each lightcurve
+        for i, band in enumerate(bands):
+            peaks = []
+            lightcurves = mags[:, i, :]
+            for lightcurve in lightcurves:
+                peaks.append(np.nanmin(lightcurve))
+            peak_mags[band] = peaks
+            percentiles[band] = np.nanpercentile(peaks, percentile_list)
+    except: pass
+    #percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    return percentiles
 
 
 def initial_mass_draws(dist, mass_draws):
@@ -354,7 +465,7 @@ def ejecta_to_lightcurve(samples):
     Parameters
     ----------
     samples: astropy Table
-        Table of ejecta quatities
+        Table of ejecta quantities
     save_pkl: bool
         whether or not to save lightcurves to pickle files
 
