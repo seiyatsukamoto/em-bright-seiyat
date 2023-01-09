@@ -55,8 +55,8 @@ date_time = time.strftime('%Y%m%d-%H%M%S')
 
 # ADD TO CONFIG?
 N_cores = 10
-downsample = True
-#downsample = False
+#downsample = True
+downsample = False
 
 def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
                            thetas=None, mass_dist=None, mass_draws=None,
@@ -129,6 +129,9 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     except ValueError: pass
 
     idx_thetas = np.where(thetas > 90.)[0]
+    #print(idx_thetas)
+    #if idx_thetas:
+    #    print('Folding thetas')
     thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
     all_ejecta_data = []
@@ -142,8 +145,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     ejecta_samples = all_ejecta_samples
     if downsample:
-        ejecta_samples = ejecta_samples.downsample(Nsamples=2000)
-        #ejecta_samples = ejecta_samples.downsample(Nsamples=20)
+        #ejecta_samples = ejecta_samples.downsample(Nsamples=2000)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
     phis = 45 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
@@ -158,15 +161,24 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
         if k < N_samples:
             sample_split.append(ejecta_samples[k:N_samples])
         lightcurve_data, lightcurve_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(ejecta_to_lightcurve)(sample) for sample in sample_split))    
+        lightcurve_samples = astropy.table.vstack(lightcurve_data)
+
+    elif len(ejecta_samples)==1:
+        lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
 
     else:
         lightcurve_data = []
         print('running on one core')
+        print(len(ejecta_samples))
         for sample in ejecta_samples:
+            print(sample)
+            #print(sample.dtype())
+            print('----------')
+            #print(ejecta_samples.dtype())
             lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
             lightcurve_data.append(lightcurves)
-    
-    lightcurve_samples = astropy.table.vstack(lightcurve_data)
+            lightcurve_samples = astropy.table.vstack(lightcurve_data)
+    #lightcurve_samples = astropy.table.vstack(lightcurve_data)
 
     sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
     yields_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
@@ -492,7 +504,7 @@ def ejecta_to_lightcurve(samples):
     Parameters
     ----------
     samples: astropy Table
-        Table of ejecta quatities
+        Table of ejecta quantities
     save_pkl: bool
         whether or not to save lightcurves to pickle files
 

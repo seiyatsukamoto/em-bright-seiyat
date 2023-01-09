@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "1.0.1"
+version = "1.1.0.dev1"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 readme = "README.md"
 authors = [
@@ -25,11 +25,11 @@ h5py = ">=2.10.0"
 gwemlightcurves = {git = "https://github.com/mcoughlin/gwemlightcurves", branch = "master"}
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
-Sphinx = "^4.1.2"
-toml = "^0.10.2"
-nbsphinx = "^0.8.7"
-flake8 = "^4.0.1"
+pytest = "*"
+Sphinx = "*"
+toml = "*"
+nbsphinx = "*"
+flake8 = "*"
 htcondor = ">=9.0.6"
 
 
