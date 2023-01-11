@@ -1,5 +1,12 @@
 # Changelog
-## [1.1.0] - unreleased
+## [1.1.1] - Unreleased
+
+- No changes yet
+
+## [1.1.0] - 2023-1-11
+
+- update dependencies due to pipelines failing: astropy, h5py, pandas (commit message mentions scipy, but 
+  that is not affected)
 
 ## [1.1.0.dev1] - 2022-12-12
 
