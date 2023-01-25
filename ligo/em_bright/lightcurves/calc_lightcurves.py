@@ -19,7 +19,6 @@ import ligo.em_bright.lightcurves.lightcurve_utils as em_bright_utils
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019, KrFo2019
-#from gwemlightcurves.EOS.EOS4ParameterPiecewisePolytrope import EOS4ParameterPiecewisePolytrope
 from EOS4ParameterPiecewisePolytrope import EOS4ParameterPiecewisePolytrope
 
 # load configs
@@ -55,8 +54,8 @@ date_time = time.strftime('%Y%m%d-%H%M%S')
 
 # ADD TO CONFIG?
 N_cores = 10
-#downsample = True
-downsample = False
+downsample = True
+#downsample = False
 
 def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
                            thetas=None, mass_dist=None, mass_draws=None,
@@ -99,11 +98,12 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     # function in utils??
     # shift masses to source frame if distances provided
-    shift_distances = True
+    #shift_distances = True
     try:
-        if distances == None:
+        if np.array(distances) == None:
             shift_distances = False
-    except ValueError: pass
+        else: shift_distances = True
+    except ValueError: shift_distances = True
     if shift_distances:
         print('Shifting masses using passed distances')
         distances = Distance(distances, u.Mpc)
@@ -123,15 +123,12 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
             print('Generating random thetas')
             farah_thetas = np.loadtxt('farah_thetas.txt')
             kde = scipy.stats.gaussian_kde(farah_thetas)
-            # len m1 may fail is m1 is passed as float
+            # len m1 may fail if m1 is passed as float
             thetas = kde.resample(size=len(m1s))[0]
             #thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
     except ValueError: pass
 
     idx_thetas = np.where(thetas > 90.)[0]
-    #print(idx_thetas)
-    #if idx_thetas:
-    #    print('Folding thetas')
     thetas[idx_thetas] = 180. - thetas[idx_thetas]
 
     all_ejecta_data = []
@@ -145,8 +142,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     ejecta_samples = all_ejecta_samples
     if downsample:
-        #ejecta_samples = ejecta_samples.downsample(Nsamples=2000)
-        ejecta_samples = ejecta_samples.downsample(Nsamples=15)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
+        #ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
     phis = 45 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
@@ -169,33 +166,14 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     else:
         lightcurve_data = []
         print('running on one core')
-        print(len(ejecta_samples))
         for sample in ejecta_samples:
-            print(sample)
-            #print(sample.dtype())
-            print('----------')
-            #print(ejecta_samples.dtype())
             lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
             lightcurve_data.append(lightcurves)
             lightcurve_samples = astropy.table.vstack(lightcurve_data)
-    #lightcurve_samples = astropy.table.vstack(lightcurve_data)
 
     sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
     yields_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
     return lightcurve_samples, all_ejecta_samples, yields_ejecta, all_eos_metadata, lightcurve_metadata
-
-
-# delete
-def lightcurve_calculations(m1, m2, theta, N_eos=N_eos, eos_draws=draws, N_cores=N_cores):
-    '''added to simplify parallel processing
-    '''
-    samples, eos_metadata = run_eos(m1, m2, theta,
-                                    N_eos=N_eos, eos_draws=draws)
-    if downsample: 
-        samples = samples.downsample(Nsamples=1000)
-    lightcurves, lightcurve_metadata = ejecta_to_lightcurve(samples)
-
-    return lightcurves, lightcurve_metadata, eos_metadata
 
 
 def find_percentiles(lightcurve_data):
