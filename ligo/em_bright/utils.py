@@ -280,7 +280,7 @@ def train():
             test_results.to_csv(test_results_filename, index=False)
             # train on the full dataset
             clf = KNeighborsClassifier(**clf_kwargs)
-            clf.fit(features, target_value)
+            clf.fit(features.values, target_value)
             if args.param_sweep_plot_prefix:
                 _create_param_sweep_plot(
                     clf, category,
@@ -307,7 +307,7 @@ def train():
         test_results_filename = 'cross-val-res-' + 'mass-gap' + '.csv'
         test_results.to_csv(test_results_filename, index=False)
         clf = RandomForestClassifier(**clf_kwargs)
-        clf.fit(features, targets.squeeze())
+        clf.fit(features.values, targets.squeeze())
         _create_param_sweep_plot(
             clf, 'mass_gap',
             prefix='SLy'  # FIXME: ad-hoc prefix needed, not used for plotting
@@ -639,7 +639,7 @@ def run_KNN_classifier(X_train, y_train,
     if kwargs.get('metric') == 'mahalanobis':
         kwargs['n_jobs'] = 1  # issue with KDTree, BallTree with n_jobs > 1
     clf = KNeighborsClassifier(**kwargs)
-    clf.fit(X_train, y_train)
+    clf.fit(X_train.values, y_train)
     predictions_proba = clf.predict_proba(X_test)
     predict = clf.predict(X_test)
     return predictions_proba, predict
@@ -661,7 +661,7 @@ def run_RF_classifier(X_train, y_train, X_test,
         Feature testing set, can be array or DataFrame
     '''
     clf = RandomForestClassifier(**kwargs)
-    clf.fit(X_train, y_train)
+    clf.fit(X_train.values, y_train)
     predictions_proba = clf.predict_proba(X_test)
     predict = clf.predict(X_test)
     return predictions_proba, predict

@@ -15,8 +15,8 @@ from astropy.utils.data import (
 __version__ = '1.1.0'
 
 PACKAGE_DATA_BASE_URL = (
-    'https://git.ligo.org/emfollow/em-properties/em-bright/'
-    '-/raw/main/ligo/em_bright/data'
+    'https://git.ligo.org/sushant.sharma-chaudhary/em-bright-gp/'
+    '-/raw/fix-warning/ligo/em_bright/data'
 )
 
 PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (
