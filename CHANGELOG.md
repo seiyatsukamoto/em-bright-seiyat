@@ -1,7 +1,10 @@
 # Changelog
-## [1.1.1] - Unreleased
+## [1.1.2]
+- No changes yet
 
-- bumped sklearn to v1.2.1 and retrained classifer
+## [1.1.1] - 2023-2-23
+
+- Bump sklearn to v1.2.1. Retrain classifer
 
 ## [1.1.0] - 2023-1-11
 

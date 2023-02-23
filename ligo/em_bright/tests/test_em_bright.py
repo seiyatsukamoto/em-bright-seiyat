@@ -14,7 +14,7 @@ from .. import em_bright, categorize, utils, EOS_MAX_MASS
 
 def test_version():
     from .. import __version__
-    assert __version__ == '1.0.2'
+    assert __version__ == '1.1.1'
 
 
 @pytest.mark.parametrize(
