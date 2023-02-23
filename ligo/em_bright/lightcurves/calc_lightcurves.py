@@ -15,6 +15,7 @@ from configparser import ConfigParser
 from pathlib import Path
 from joblib import Parallel, delayed
 
+from ligo.em_bright.computeDiskMass import computeCompactness
 import ligo.em_bright.lightcurves.lightcurve_utils as em_bright_utils
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
@@ -111,11 +112,13 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
         m1s = m1s/(1+z)
         m2s = m2s/(1+z)
 
-    # sort masses???
-
     # draw masses from dist
     if mass_dist:
         m1s, m2s = initial_mass_draws(mass_dist, mass_draws)
+
+    # sort masses to make sure m1 > m2
+    m1s_sorted = np.maximum(m1s, m2s)
+    m2s_sorted = np.minimum(m1s, m2s)
 
     # draw thetas if needed
     try: 
@@ -133,7 +136,7 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     all_ejecta_data = []
     all_eos_metadata = []
-    for m1, m2, theta in zip(m1s, m2s, thetas):
+    for m1, m2, theta in zip(m1s_sorted, m2s_sorted, thetas):
         samples, eos_metadata = run_eos(m1, m2, theta, N_eos=N_eos, eos_draws=draws)
         all_ejecta_data.append(samples)
         all_eos_metadata.append(eos_metadata)
@@ -142,7 +145,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     ejecta_samples = all_ejecta_samples
     if downsample:
-        ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=200)
+        #ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
         #ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
     phis = 45 * np.ones(len(ejecta_samples))
@@ -236,10 +240,7 @@ def initial_mass_draws(dist, mass_draws):
         less massive component mass in solar masses
     '''
 
-    m1_unsorted, m2_unsorted, merger_type = dist(mass_draws)
-    # sort to make sure m1 > m2
-    m1 = np.maximum(m1_unsorted, m2_unsorted)
-    m2 = np.minimum(m1_unsorted, m2_unsorted)
+    m1, m2, merger_type = dist(mass_draws)
 
     return m1, m2
 
@@ -282,10 +283,13 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
                       names=('m1', 'm2', 'chi_eff', 'mchirp', 'eta', 'q'))
 
     samples, eos_metadata = eos_samples(samples, thetas, N_eos, eos_draws)
-    samples = samples.calc_tidal_lambda(remove_negative_lambda=True)
+    
+    if eosname == 'gp':
+        # removes incorrect lambda values
+        samples = samples.calc_tidal_lambda(remove_negative_lambda=True)
 
-    # Calc compactness
-    samples = samples.calc_compactness(fit=True)
+        # Calc compactness
+        samples = samples.calc_compactness(fit=True)
 
     # Calc baryonic mass
     samples = samples.calc_baryonic_mass(EOS=None, TOV=None, fit=True)
@@ -377,7 +381,7 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     return samples, eos_metadata
 
 
-def eos_samples(samples, thetas, nsamples, eos_draws):
+def eos_samples(samples, thetas, N_eos, eos_draws):
     '''
     Draws different eos's for ejecta calculations
 
@@ -387,7 +391,7 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
         table of ejecta quantities
     thetas: np.array
         array of theta draws
-    nsamples: int
+    N_eos: int
         number of eos draws
     eos_draws: KNTable object
         eos draws to be used
@@ -403,61 +407,69 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
     lambda1s, lambda2s, m1s, m2s = [], [], [], []
     chi_effs, mbnss, qs, mchirps, etas = [], [], [], [], []
     # duplicate thetas for each eos draw
-    thetas = thetas*np.ones(nsamples)
+    thetas = thetas*np.ones(N_eos)
 
     eos_metadata = {'fix_seed': config.get('lightcurve_configs', 'fix_seed')}
     meta_indices = []
 
-    if eosname == 'SLy':
-        eos = EOS4ParameterPiecewisePolytrope('SLy')
-        indices = range(nsamples)
+    if eosname != 'gp':
+        c1, _, mbns = computeCompactness(samples['m1'], eosname=eosname)
+        c2, _, _ = computeCompactness(samples['m2'], eosname=eosname)
+        samples['c1'], samples['c2'], samples['mbns'] = c1, c2, mbns
+        samples['theta'] = thetas
+        # for metadata
+        m1s, m2s, N_eos = samples['m1'], samples['m2'], 1
+
+    #if eosname == 'SLy':
+    #    eos = EOS4ParameterPiecewisePolytrope('SLy')
+    #    indices = range(N_eos)
 
     # read Phil + Reed's eos files
     for ii, row in enumerate(samples):
         if eosname == 'gp':
-            indices = np.random.choice(len(eos_draws), size=nsamples)
+            indices = np.random.choice(len(eos_draws), size=N_eos)
             meta_indices.append(indices)
-        for index in indices:
-            lambda1, lambda2 = -1, -1
-            mbns = -1
-            # samples lambda's from Phil + Reed's files
-            while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
-                phasetr = 0
-                data_out = eos_draws[index]
-                marray, larray = data_out['M'], data_out['Lambda']
-                f = interp.interp1d(marray, larray,
-                                    fill_value=0, bounds_error=False)
-                # pick lambda from least compact stable branch
-                if float(f(row['m1'])) > lambda1:
-                    lambda1 = f(row['m1'])
-                if float(f(row['m2'])) > lambda2:
-                    lambda2 = f(row['m2'])
-                # get global maximum mass
-                if np.max(marray) > mbns:
-                    mbns = np.max(marray)
-                # check all stable branches
-                phasetr += 1
+            for index in indices:
+                lambda1, lambda2 = -1, -1
+                mbns = -1
+                # samples lambda's from Phil + Reed's files
+                while (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
+                    phasetr = 0
+                    data_out = eos_draws[index]
+                    marray, larray = data_out['M'], data_out['Lambda']
+                    f = interp.interp1d(marray, larray,
+                                        fill_value=0, bounds_error=False)
+                    # pick lambda from least compact stable branch
+                    if float(f(row['m1'])) > lambda1:
+                        lambda1 = f(row['m1'])
+                    if float(f(row['m2'])) > lambda2:
+                        lambda2 = f(row['m2'])
+                    # get global maximum mass
+                    if np.max(marray) > mbns:
+                        mbns = np.max(marray)
+                    # check all stable branches
+                    phasetr += 1
 
-                if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
-                    # pick a different eos if it returns
-                    # negative Lambda or Mmax
-                    index = int(np.random.choice(len(eos_draws), size=1))
-                    lambda1, lambda2 = -1, -1
-                    mbns = -1
+                    if (lambda1 < 0.) or (lambda2 < 0.) or (mbns < 0.):
+                        # pick a different eos if it returns
+                        # negative Lambda or Mmax
+                        index = int(np.random.choice(len(eos_draws), size=1))
+                        lambda1, lambda2 = -1, -1
+                        mbns = -1
 
-            if eosname == "SLy":
-                lambda1, lambda2 = eos.lambdaofm(row['m1']), eos.lambdaofm(row['m2'])
-                mbns = eos.maxmass()
+                #if eosname == "SLy":
+                #    lambda1, lambda2 = eos.lambdaofm(row['m1']), eos.lambdaofm(row['m2'])
+                #    mbns = eos.maxmass()
 
-            m1s.append(row['m1'])
-            m2s.append(row['m2'])
-            lambda1s.append(lambda1)
-            lambda2s.append(lambda2)
-            chi_effs.append(row['chi_eff'])
-            mbnss.append(mbns)
-            qs.append(row['q'])
-            mchirps.append(row['mchirp'])
-            etas.append(row['eta'])
+                m1s.append(row['m1'])
+                m2s.append(row['m2'])
+                lambda1s.append(lambda1)
+                lambda2s.append(lambda2)
+                chi_effs.append(row['chi_eff'])
+                mbnss.append(mbns)
+                qs.append(row['q'])
+                mchirps.append(row['mchirp'])
+                etas.append(row['eta'])
 
     eos_metadata['m1s'], eos_metadata['m2s'] = m1s, m2s
     eos_metadata['mej_err'] = ejecta_model['mej_error']
@@ -466,12 +478,12 @@ def eos_samples(samples, thetas, nsamples, eos_draws):
     if eosname == 'gp':
         eos_metadata['eos_draw_indices'] = indices
 
-    # create a new table including each eos draw for each
-    # component mass pair, and new quantities
-    data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs,
-                      thetas, mbnss, qs, mchirps, etas)).T
-    samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff',
-                                   'theta', 'mbns', 'q', 'mchirp', 'eta'))
+        # create a new table including each eos draw for each
+        # component mass pair, and new quantities
+        data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs,
+                          thetas, mbnss, qs, mchirps, etas)).T
+        samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff',
+                                       'theta', 'mbns', 'q', 'mchirp', 'eta'))
 
     return samples, eos_metadata
 
