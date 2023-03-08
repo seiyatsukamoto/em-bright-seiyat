@@ -17,6 +17,7 @@ from joblib import Parallel, delayed
 
 from ligo.em_bright.computeDiskMass import computeCompactness
 import ligo.em_bright.lightcurves.lightcurve_utils as em_bright_utils
+from ligo.em_bright.lightcurves.lightcurve_utils import BNSEjectaFitting, NSBHEjectaFitting
 from gwemlightcurves import lightcurve_utils
 from gwemlightcurves.KNModels import KNTable
 from gwemlightcurves.EjectaFits import PaDi2019, KrFo2019
@@ -37,6 +38,7 @@ draws = em_bright_utils.load_eos_posterior()
 ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
 N_eos = ejecta_model['N_eos']
 eosname = ejecta_model['eosname']
+zeta = ejecta_model['zeta']
 # load lightcurve configs
 lightcurve_model = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
@@ -290,6 +292,8 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
 
         # Calc compactness
         samples = samples.calc_compactness(fit=True)
+    else:
+        samples['lambda1'], samples['lambda2'] = em_bright_utils.compactness_to_lambdas(samples['c1'], samples['c2'])
 
     # Calc baryonic mass
     samples = samples.calc_baryonic_mass(EOS=None, TOV=None, fit=True)
@@ -310,48 +314,99 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     samples['merger_type'][idx3] = 'BBH'
 
     mej = np.zeros(samples['m1'].shape)
-    vej = np.zeros(samples['m1'].shape)
+    #vej = np.zeros(samples['m1'].shape)
     wind_mej = np.zeros(samples['m1'].shape)
     dyn_mej = np.zeros(samples['m1'].shape)
 
+    BNS_fit = BNSEjectaFitting()
+    NSBH_fit = NSBHEjectaFitting()
+
+    #BNS
+    samples = em_bright_utils.lambdas_to_lambdatilde(samples)
+    R16 = samples['mchirp'] * (samples['lambdatilde']/0.0042)**(1.0/6.0)
+
+
+    log10_disk_mass = BNSEjectaFitting.log10_disk_mass_fitting(BNS_fit, samples['m1'][idx1]+samples['m2'][idx1],
+                                                      samples['q'][idx1], samples['mbns'][idx1], R16[idx1])
+    #    total_mass,
+    #    mass_ratio,
+    #    MTOV,
+    #    R16,
+
+    mej_disk1 = 10**log10_disk_mass * zeta
+
+    mej_dyn1 = BNSEjectaFitting.dynamic_mass_fitting_KrFo(BNS_fit, samples['m1'][idx1], samples['m2'][idx2],
+                                                 samples['c1'][idx1], samples['c2'][idx1])
+    #    mass_1,
+    #    mass_2,
+    #    compactness_1,
+    #    compactness_2
+
+    #NSBH
+    disk_mass2 = NSBHEjectaFitting.remnant_disk_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
+                                                   samples['c2'][idx2], samples['chi_eff'][idx2])
+    #    mass_1_source,
+    #    mass_2_source,
+    #    compactness_2,
+    #    chi_eff,
+
+    mej_disk2 = disk_mass2 * zeta
+
+    mej_dyn2 = NSBHEjectaFitting.dynamic_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
+                                             samples['c2'][idx2], samples['chi_eff'][idx2])
+    #    mass_1_source,
+    #    mass_2_source,
+    #    compactness_2,
+    #    chi_eff,
+
+    # BH c1 = 4/9 lambda1 = 0
+
     # calc the mass of ejecta
-    mej1, dyn_mej1, wind_mej1 = PaDi2019.calc_meje(samples['m1'],
-                                                   samples['c1'],
-                                                   samples['m2'],
-                                                   samples['c2'],
-                                                   split_mej=True)
+    #mej1, dyn_mej1, wind_mej1 = PaDi2019.calc_meje(samples['m1'],
+    #                                               samples['c1'],
+    #                                               samples['m2'],
+    #                                               samples['c2'],
+    #                                               split_mej=True)
 
     # calc the velocity of ejecta
-    vej1 = PaDi2019.calc_vej(samples['m1'], samples['c1'],
-                             samples['m2'], samples['c2'])
+    #vej1 = PaDi2019.calc_vej(samples['m1'], samples['c1'],
+    #                         samples['m2'], samples['c2'])
 
     # calc the mass of ejecta
-    mej2, dyn_mej2, wind_mej2 = KrFo2019.calc_meje(samples['q'],
-                                                   samples['chi_eff'],
-                                                   samples['c2'],
-                                                   samples['m2'],
-                                                   split_mej=True)
+    #mej2, dyn_mej2, wind_mej2 = KrFo2019.calc_meje(samples['q'],
+    #                                               samples['chi_eff'],
+    #                                               samples['c2'],
+    #                                               samples['m2'],
+    #                                               split_mej=True)
 
     # calc the velocity of ejecta
-    vej2 = KrFo2019.calc_vave(samples['q'])
+    #vej2 = KrFo2019.calc_vave(samples['q'])
 
     # calc the mass of ejecta
     mej3 = np.zeros(samples['m1'].shape)
-    dyn_mej3 = np.zeros(samples['m1'].shape)
-    wind_mej3 = np.zeros(samples['m1'].shape)
+    mej_dyn3 = np.zeros(samples['m1'].shape)
+    mej_disk3 = np.zeros(samples['m1'].shape)
     # calc the velocity of ejecta
-    vej3 = np.zeros(samples['m1'].shape) + 0.2
+    #vej3 = np.zeros(samples['m1'].shape) + 0.2
 
-    mej[idx1], vej[idx1] = mej1[idx1], vej1[idx1]
-    mej[idx2], vej[idx2] = mej2[idx2], vej2[idx2]
-    mej[idx3], vej[idx3] = mej3[idx3], vej3[idx3]
+    #mej[idx1], vej[idx1] = mej1[idx1], vej1[idx1]
+    #mej[idx2], vej[idx2] = mej2[idx2], vej2[idx2]
+    #mej[idx3], vej[idx3] = mej3[idx3], vej3[idx3]
 
-    wind_mej[idx1], dyn_mej[idx1] = wind_mej1[idx1], dyn_mej1[idx1]
-    wind_mej[idx2], dyn_mej[idx2] = wind_mej2[idx2], dyn_mej2[idx2]
-    wind_mej[idx3], dyn_mej[idx3] = wind_mej3[idx3], dyn_mej3[idx3]
+    mej[idx1] = mej_dyn1 + mej_disk1
+    mej[idx2] = mej_dyn2 + mej_disk2
+    mej[idx3] = mej3
+
+    #wind_mej[idx1], dyn_mej[idx1] = wind_mej1[idx1], dyn_mej1[idx1]
+    #wind_mej[idx2], dyn_mej[idx2] = wind_mej2[idx2], dyn_mej2[idx2]
+    #wind_mej[idx3], dyn_mej[idx3] = wind_mej3[idx3], dyn_mej3[idx3]
+
+    wind_mej[idx1], dyn_mej[idx1] = mej_disk1, mej_dyn1
+    wind_mej[idx2], dyn_mej[idx2] = mej_disk2, mej_dyn2
+    wind_mej[idx3], dyn_mej[idx3] = mej_disk3, mej_dyn3
 
     samples['mej'] = mej
-    samples['vej'] = vej
+    #samples['vej'] = vej
     samples['dyn_mej'] = dyn_mej
     samples['wind_mej'] = wind_mej
 
