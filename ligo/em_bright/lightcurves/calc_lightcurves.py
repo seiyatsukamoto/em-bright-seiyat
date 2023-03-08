@@ -275,8 +275,6 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
         meta data describing eos draws
     '''
 
-    #if lightcurve_model['chi_eff'] == 'random':
-
     mchirp, eta, q = lightcurve_utils.ms2mc(m1, m2)
     model, chi_eff = lightcurve_model['model'], lightcurve_model['chi_eff']
 
@@ -314,7 +312,6 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     samples['merger_type'][idx3] = 'BBH'
 
     mej = np.zeros(samples['m1'].shape)
-    #vej = np.zeros(samples['m1'].shape)
     wind_mej = np.zeros(samples['m1'].shape)
     dyn_mej = np.zeros(samples['m1'].shape)
 
@@ -328,87 +325,34 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
 
     log10_disk_mass = BNSEjectaFitting.log10_disk_mass_fitting(BNS_fit, samples['m1'][idx1]+samples['m2'][idx1],
                                                       samples['q'][idx1], samples['mbns'][idx1], R16[idx1])
-    #    total_mass,
-    #    mass_ratio,
-    #    MTOV,
-    #    R16,
 
     mej_disk1 = 10**log10_disk_mass * zeta
 
-    mej_dyn1 = BNSEjectaFitting.dynamic_mass_fitting_KrFo(BNS_fit, samples['m1'][idx1], samples['m2'][idx2],
+    mej_dyn1 = BNSEjectaFitting.dynamic_mass_fitting_KrFo(BNS_fit, samples['m1'][idx1], samples['m2'][idx1],
                                                  samples['c1'][idx1], samples['c2'][idx1])
-    #    mass_1,
-    #    mass_2,
-    #    compactness_1,
-    #    compactness_2
 
     #NSBH
     disk_mass2 = NSBHEjectaFitting.remnant_disk_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
                                                    samples['c2'][idx2], samples['chi_eff'][idx2])
-    #    mass_1_source,
-    #    mass_2_source,
-    #    compactness_2,
-    #    chi_eff,
 
     mej_disk2 = disk_mass2 * zeta
 
     mej_dyn2 = NSBHEjectaFitting.dynamic_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
                                              samples['c2'][idx2], samples['chi_eff'][idx2])
-    #    mass_1_source,
-    #    mass_2_source,
-    #    compactness_2,
-    #    chi_eff,
-
+    
     # BH c1 = 4/9 lambda1 = 0
-
-    # calc the mass of ejecta
-    #mej1, dyn_mej1, wind_mej1 = PaDi2019.calc_meje(samples['m1'],
-    #                                               samples['c1'],
-    #                                               samples['m2'],
-    #                                               samples['c2'],
-    #                                               split_mej=True)
-
-    # calc the velocity of ejecta
-    #vej1 = PaDi2019.calc_vej(samples['m1'], samples['c1'],
-    #                         samples['m2'], samples['c2'])
-
-    # calc the mass of ejecta
-    #mej2, dyn_mej2, wind_mej2 = KrFo2019.calc_meje(samples['q'],
-    #                                               samples['chi_eff'],
-    #                                               samples['c2'],
-    #                                               samples['m2'],
-    #                                               split_mej=True)
-
-    # calc the velocity of ejecta
-    #vej2 = KrFo2019.calc_vave(samples['q'])
-
-    # calc the mass of ejecta
-    mej3 = np.zeros(samples['m1'].shape)
-    mej_dyn3 = np.zeros(samples['m1'].shape)
-    mej_disk3 = np.zeros(samples['m1'].shape)
-    # calc the velocity of ejecta
-    #vej3 = np.zeros(samples['m1'].shape) + 0.2
-
-    #mej[idx1], vej[idx1] = mej1[idx1], vej1[idx1]
-    #mej[idx2], vej[idx2] = mej2[idx2], vej2[idx2]
-    #mej[idx3], vej[idx3] = mej3[idx3], vej3[idx3]
 
     mej[idx1] = mej_dyn1 + mej_disk1
     mej[idx2] = mej_dyn2 + mej_disk2
-    mej[idx3] = mej3
-
-    #wind_mej[idx1], dyn_mej[idx1] = wind_mej1[idx1], dyn_mej1[idx1]
-    #wind_mej[idx2], dyn_mej[idx2] = wind_mej2[idx2], dyn_mej2[idx2]
-    #wind_mej[idx3], dyn_mej[idx3] = wind_mej3[idx3], dyn_mej3[idx3]
 
     wind_mej[idx1], dyn_mej[idx1] = mej_disk1, mej_dyn1
     wind_mej[idx2], dyn_mej[idx2] = mej_disk2, mej_dyn2
-    wind_mej[idx3], dyn_mej[idx3] = mej_disk3, mej_dyn3
 
     samples['mej'] = mej
-    #samples['vej'] = vej
     samples['dyn_mej'] = dyn_mej
     samples['wind_mej'] = wind_mej
+
+    print(np.max(mej), np.mean(mej))
 
     # Add draw from a gaussian in the log of
     # ejecta mass with 1-sigma size of 70%
@@ -474,10 +418,6 @@ def eos_samples(samples, thetas, N_eos, eos_draws):
         samples['theta'] = thetas
         # for metadata
         m1s, m2s, N_eos = samples['m1'], samples['m2'], 1
-
-    #if eosname == 'SLy':
-    #    eos = EOS4ParameterPiecewisePolytrope('SLy')
-    #    indices = range(N_eos)
 
     # read Phil + Reed's eos files
     for ii, row in enumerate(samples):
