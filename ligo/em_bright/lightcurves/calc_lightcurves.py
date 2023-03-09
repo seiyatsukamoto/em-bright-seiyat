@@ -91,7 +91,7 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     -------
     lightcurve_data: astropy table object
         ejecta quantities and lightcurves for various mag bands
-    yields_ejecta: float
+    has_ejecta: float
         fraction (0 to 1) of mergers with ejecta mass > 1e-3 solar masses
     eos_metadata: astropy table object
         meta data describing eos draws
@@ -145,16 +145,20 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     all_ejecta_samples = astropy.table.vstack(all_ejecta_data)
     all_eos_metadata = astropy.table.vstack(all_eos_metadata)
 
-    ejecta_samples = all_ejecta_samples
+    #ejecta_samples = all_ejecta_samples
+    ejecta_samples = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
     if downsample:
-        ejecta_samples = ejecta_samples.downsample(Nsamples=200)
+        ejecta_samples = ejecta_samples.downsample(Nsamples=50)
         #ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
         #ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
     phis = 45 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
 
-    if N_cores > 1:
+    lightcurve_samples, lightcurve_metadata = None, None
+    if len(ejecta_samples)==1:
+        lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
+    elif N_cores > 1:
         print(f'running on {N_cores} cores')
         N_samples = len(ejecta_samples)
         N_per_core = int(N_samples/N_cores)
@@ -165,21 +169,17 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
             sample_split.append(ejecta_samples[k:N_samples])
         lightcurve_data, lightcurve_metadata = zip(*Parallel(n_jobs=N_cores)(delayed(ejecta_to_lightcurve)(sample) for sample in sample_split))    
         lightcurve_samples = astropy.table.vstack(lightcurve_data)
-
-    elif len(ejecta_samples)==1:
-        lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
-
     else:
         lightcurve_data = []
         print('running on one core')
         for sample in ejecta_samples:
             lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
             lightcurve_data.append(lightcurves)
-            lightcurve_samples = astropy.table.vstack(lightcurve_data)
+        lightcurve_samples = astropy.table.vstack(lightcurve_data)
 
     sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
-    yields_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
-    return lightcurve_samples, all_ejecta_samples, yields_ejecta, all_eos_metadata, lightcurve_metadata
+    has_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
+    return lightcurve_samples, all_ejecta_samples, has_ejecta, all_eos_metadata, lightcurve_metadata
 
 
 def find_percentiles(lightcurve_data):
@@ -318,20 +318,24 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     BNS_fit = BNSEjectaFitting()
     NSBH_fit = NSBHEjectaFitting()
 
-    #BNS
+    # BH c1 = 4/9 lambda1 = 0
+    samples['c1'][idx2], samples['lambda1'][idx2] = 4/9, 0
+    samples['c1'][idx3], samples['lambda1'][idx3] = 4/9, 0
+    samples['c2'][idx3], samples['lambda2'][idx3] = 4/9, 0
+
     samples = em_bright_utils.lambdas_to_lambdatilde(samples)
     R16 = samples['mchirp'] * (samples['lambdatilde']/0.0042)**(1.0/6.0)
 
-
-    log10_disk_mass = BNSEjectaFitting.log10_disk_mass_fitting(BNS_fit, samples['m1'][idx1]+samples['m2'][idx1],
+    # BNS
+    log10_disk_mass1 = BNSEjectaFitting.log10_disk_mass_fitting(BNS_fit, samples['m1'][idx1]+samples['m2'][idx1],
                                                       samples['q'][idx1], samples['mbns'][idx1], R16[idx1])
 
-    mej_disk1 = 10**log10_disk_mass * zeta
+    mej_disk1 = 10**log10_disk_mass1 * zeta
 
     mej_dyn1 = BNSEjectaFitting.dynamic_mass_fitting_KrFo(BNS_fit, samples['m1'][idx1], samples['m2'][idx1],
                                                  samples['c1'][idx1], samples['c2'][idx1])
 
-    #NSBH
+    # NSBH
     disk_mass2 = NSBHEjectaFitting.remnant_disk_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
                                                    samples['c2'][idx2], samples['chi_eff'][idx2])
 
@@ -340,7 +344,6 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     mej_dyn2 = NSBHEjectaFitting.dynamic_mass_fitting(NSBH_fit, samples['m1'][idx2], samples['m2'][idx2],
                                              samples['c2'][idx2], samples['chi_eff'][idx2])
     
-    # BH c1 = 4/9 lambda1 = 0
 
     mej[idx1] = mej_dyn1 + mej_disk1
     mej[idx2] = mej_dyn2 + mej_disk2

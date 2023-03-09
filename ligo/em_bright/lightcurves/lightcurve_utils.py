@@ -114,6 +114,7 @@ def compactness_to_lambdas(c1, c2):
 
 
 class NSBHEjectaFitting(object):
+    # from https://github.com/nuclear-multimessenger-astronomy/nmma/blob/main/nmma/joint/conversion.py
     def __init__(self):
         pass
 
@@ -198,6 +199,7 @@ class NSBHEjectaFitting(object):
 
 
 class BNSEjectaFitting(object):
+    # from https://github.com/nuclear-multimessenger-astronomy/nmma/blob/main/nmma/joint/conversion.py
     def __init__(self):
         pass
 
