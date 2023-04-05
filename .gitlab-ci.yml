@@ -65,10 +65,10 @@ tarball:
           $(which ${entrypoint}) --help
       ; done
 
-test:python3.8:minimal:
+test:python3.9:minimal:
   extends:
     - .test
-  image: python:3.8
+  image: python:3.9
   needs: []
   variables:
     # install from the git repository
@@ -85,15 +85,21 @@ test:python3.8:minimal:
     # then run everything else as normal
     - !reference [".test", before_script]
 
-test:python3.8:
-  extends:
-    - .test
-  image: python:3.8
 
 test:python3.9:
   extends:
     - .test
   image: python:3.9
+
+test:python3.10:
+  extends:
+    - .test
+  image: python:3.10
+
+test:python3.11:
+  extends:
+    - .test
+  image: python:3.11
 
 # -- lint -------------------
 #

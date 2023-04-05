@@ -1,6 +1,8 @@
 # Changelog
 ## [1.1.2]
-- No changes yet
+
+- Pin scikit-learn to 1.2.1 due to sklearn's model persistence.
+- Drop python3.8 support. Add python3.11 testing.
 
 ## [1.1.1] - 2023-2-23
 
