@@ -23,7 +23,7 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from glob import glob
 
-from . import EOS_BAYES_FACTORS
+from .data import EOS_BAYES_FACTORS
 
 try:
     import htcondor

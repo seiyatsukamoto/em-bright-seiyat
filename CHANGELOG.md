@@ -3,6 +3,8 @@
 
 - Pin scikit-learn to 1.2.1 due to sklearn's model persistence.
 - Drop python3.8 support. Add python3.11 testing.
+- Make data directory a subpackage, and set package data related variables there.
+  This does not download data files when importing the top level package.
 
 ## [1.1.1] - 2023-2-23
 

@@ -33,12 +33,8 @@ from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 
-from . import (
-    PACKAGE_FILENAMES,
-    EOS_MAX_MASS,
-    EOS_BAYES_FACTORS,
-    computeDiskMass
-)
+from . import computeDiskMass
+from .data import PACKAGE_FILENAMES, EOS_BAYES_FACTORS, EOS_MAX_MASS
 
 
 def join():

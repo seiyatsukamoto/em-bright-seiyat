@@ -1,22 +1,8 @@
-import json
-from concurrent.futures import (
-    as_completed,
-    ThreadPoolExecutor,
-)
-from os import getenv
-from os.path import basename
-
-from astropy.utils.console import ProgressBar
-from astropy.utils.data import (
-    download_file,
-    is_url_in_cache,
-)
-
-__version__ = '1.1.1'
+__version__ = '1.1.2dev'
 
 PACKAGE_DATA_BASE_URL = (
     'https://git.ligo.org/emfollow/em-properties/em-bright/'
-    f'-/raw/v{__version__}/ligo/em_bright/data'
+    '-/raw/main/ligo/em_bright/data'
 )
 
 PACKAGE_DATA_LINKS = {name: f'{PACKAGE_DATA_BASE_URL}/{name}' for name in (

@@ -7,7 +7,7 @@ from scipy.interpolate import UnivariateSpline, interp1d
 import lal
 import lalsimulation as lalsim
 
-from . import PACKAGE_FILENAMES
+from .data import PACKAGE_FILENAMES
 
 
 def compute_isco(chi_bh):

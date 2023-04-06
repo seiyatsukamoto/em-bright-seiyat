@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ligo.em-bright"
-version = "1.1.1"
+version = "1.1.2dev"
 description = "Possibility and properties of Electromagnetically-bright sources of gravitational-wave events"
 readme = "README.md"
 authors = [
@@ -9,7 +9,12 @@ authors = [
 packages = [
     { include = "ligo" },
 ]
-exclude = ["ligo/em_bright/data"]
+exclude = [
+    "ligo/em_bright/data/*pickle",
+    "ligo/em_bright/data/*json",
+    "ligo/em_bright/data/*dat",
+    "ligo/em_bright/data/*h5"
+]
 license = "MIT"
 
 

@@ -23,7 +23,8 @@ import numpy as np
 import pandas as pd
 import pickle
 
-from . import computeDiskMass, EOS_BAYES_FACTORS, EOS_MAX_MASS
+from . import computeDiskMass
+from .data import EOS_BAYES_FACTORS, EOS_MAX_MASS
 
 
 class _TupleHandler(object):

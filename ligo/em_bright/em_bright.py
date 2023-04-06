@@ -6,12 +6,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy import cosmology, units as u
 
-from . import (
-    EOS_BAYES_FACTORS,
-    PACKAGE_FILENAMES,
-    computeDiskMass,
-    utils
-)
+from . import computeDiskMass, utils
+from .data import EOS_BAYES_FACTORS, PACKAGE_FILENAMES
 
 ALL_EOS_DRAWS = utils.load_eos_posterior()
 
