@@ -63,7 +63,7 @@ is the recovered parameters.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    em_bright

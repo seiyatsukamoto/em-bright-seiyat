@@ -62,15 +62,17 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 pygments_style = 'sphinx'
 
 autodoc_mock_imports = [
-    'numpy',
-    'numpy.core',
-    'scipy',
-    'h5py',
+    'argparse',
     'astropy',
+    'configparser',
+    'h5py',
     'lal',
     'lalsimulation',
-    'argparse',
-    'configparser'
+    'ligo.em_bright.data',
+    'ligo.em_bright.utils',
+    'pandas',
+    'scipy',
+    'sklearn'
 ]
 
 autodoc_default_options = {
