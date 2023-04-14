@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3] - unreleased
+
+- No changes yet
+
 ## [1.1.2] - 2023-04-14
 
 - Pin scikit-learn to 1.2.1 due to sklearn's model persistence.
