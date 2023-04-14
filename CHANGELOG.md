@@ -1,24 +1,26 @@
 # Changelog
-## [1.1.2]
+
+## [1.1.2] - 2023-04-14
 
 - Pin scikit-learn to 1.2.1 due to sklearn's model persistence.
 - Drop python3.8 support. Add python3.11 testing.
 - Make data directory a subpackage, and set package data related variables there.
-  This does not download data files when importing the top level package.
+  This only downloads package data when importing the `ligo.em_bright.data` subpackage.
+  (see https://git.ligo.org/emfollow/gwcelery/-/merge_requests/1148)
 
-## [1.1.1] - 2023-2-23
+## [1.1.1] - 2023-02-23
 
 - Bump sklearn to v1.2.1. Retrain classifer
 
-## [1.1.0] - 2023-1-11
+## [1.1.0] - 2023-01-11
 
 - update dependencies due to pipelines failing: astropy, h5py, pandas (commit message mentions scipy, but 
   that is not affected)
 
 ## [1.1.0.dev1] - 2022-12-12
 
-- add HasMassGap: em_bright.source_classification returns HasNS, HasRemnant, HasMassGap
-- modify dag_writer to add mass_gap training workflow, add classifiers
+- add HasMassGap: `em_bright.source_classification` returns HasNS, HasRemnant, HasMassGap
+- modify `dag_writer` to add mass_gap training workflow, add classifiers
 - add HasMassGap unittests
 
 ## [1.0.5] - 2022-12-10
