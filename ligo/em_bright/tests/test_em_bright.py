@@ -60,7 +60,19 @@ def test_version():
        (1.6, 0.3, 201.0, 100000, 40.3, 4.2)],
      [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
       ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8')],
-     (0.0, 0.0, 1.0), (0.0, 0.0, 1.0)]]
+     (0.0, 0.0, 1.0), (0.0, 0.0, 1.0)],
+     [[(4.5, -0.1, 200.0, 1.0, 2.0, 2.0, 0.0, 0.0),
+       (1.6, 0.3, 201.0, 1.0, 5.0, 2.0, 0.0, 0.0)],
+     [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
+      ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8'),
+      ('spin_1z', '<f8'), ('spin_2z', '<f8')],
+     (1.0, 0.5, 0.5), (1.0, 0.5, 0.5)],
+     [[(4.5, -0.1, 200.0, 1.0, 2.0, 2.0, 0.99, 0.0),
+       (1.6, 0.3, 201.0, 1.0, 5.0, 2.0, 0.99, 0.0)],
+     [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
+      ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8'),
+      ('spin_1z', '<f8'), ('spin_2z', '<f8')],
+     (1.0, 1.0, 0.5), (1.0, 0.5, 0.5)]]
 )
 def test_source_classification_pe(posteriors, dtype, result, result_eos):
     """Test em_bright classification from posterior

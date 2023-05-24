@@ -198,10 +198,14 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
             mass_2 = chirp_mass * (1 + mass_ratio)**(1/5) * (mass_ratio)**(2/5)
 
     try:
-        a_1 = samples['a_1'] * np.cos(samples['tilt_1'])
-        a_2 = samples['a_2'] * np.cos(samples['tilt_2'])
+        a_1 = samples["spin_1z"]
+        a_2 = samples["spin_2z"]
     except ValueError:
-        a_1, a_2 = np.zeros(len(mass_1)), np.zeros(len(mass_2))
+        try:
+            a_1 = samples['a_1'] * np.cos(samples['tilt_1'])
+            a_2 = samples['a_2'] * np.cos(samples['tilt_2'])
+        except ValueError:
+            a_1, a_2 = np.zeros(len(mass_1)), np.zeros(len(mass_2))
 
     if num_eos_draws:
         np.random.seed(eos_seed)

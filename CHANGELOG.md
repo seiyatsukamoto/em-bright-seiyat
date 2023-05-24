@@ -2,7 +2,8 @@
 
 ## [1.1.3] - unreleased
 
-- No changes yet
+- Fetch `spin1z` and `spin2z` keys first from bilby posterior samples files in
+  `source_classification_pe`.
 
 ## [1.1.2] - 2023-04-14
 
