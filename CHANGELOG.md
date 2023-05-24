@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - unreleased
+
+- no changes.
+
 ## [1.1.3] - 2023-05-24
 
 - Fetch `spin1z` and `spin2z` keys first from bilby posterior samples files in
