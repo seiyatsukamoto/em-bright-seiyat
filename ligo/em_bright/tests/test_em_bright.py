@@ -89,7 +89,7 @@ def test_source_classification_pe(posteriors, dtype, result, result_eos):
                 'posterior_samples',
                 data=data
             )
-        r = em_bright.source_classification_pe(filename)
+        r = em_bright.source_classification_pe(filename, eosname='2H')
         r_eos = em_bright.source_classification_pe(filename, num_eos_draws=5,
                                                    eos_seed=0)
     assert r == result
@@ -106,7 +106,7 @@ def test_source_classification_pe(posteriors, dtype, result, result_eos):
      [[(5.5, 1.5, 0.5, 0.0)],
       [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
       ('spin_1z', '<f8'), ('spin_2z', '<f8')],
-      (1.0, 0.5, 0.0)],
+      (1.0, 0.4594, 0.0)],
      [[(5.5, 1.5, 0.9, 0.0)],
       [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
       ('spin_1z', '<f8'), ('spin_2z', '<f8')],
@@ -120,7 +120,7 @@ def test_source_classification_pe_nsbh_eos(posteriors, dtype, has_xxx_target):
 
     With fixed m1=5.5, m2=1.5, different spin1z
     will give different Has_Remnant predictions.
-    A +- 0.15 tolerance is used to accomodate the
+    A +- 0.02 tolerance is used to accomodate the
     random nature of the EOS marginalization.
 
     As a reference, the corresponding disk masses are:
@@ -143,9 +143,9 @@ def test_source_classification_pe_nsbh_eos(posteriors, dtype, has_xxx_target):
                 data=data
             )
         has_xxx = em_bright.source_classification_pe(filename,
-                                                     num_eos_draws=100,
-                                                     eos_seed=1)
-    assert has_xxx == pytest.approx(has_xxx_target, abs=0.15)
+                                                     num_eos_draws=10000,
+                                                     eos_seed=None)
+    assert has_xxx == pytest.approx(has_xxx_target, abs=0.02)
 
 
 @pytest.mark.parametrize(
