@@ -77,7 +77,7 @@ def computeCompactness(M_ns, eosname='2H', R_ns=None,
     eosname : str or interp1d
         Neutron star equation of state to be used
     R_ns : array_like
-        Neutron star radius.
+        Neutron star radius in m.
     max_mass : float
         Maximum mass of neutron star.
 
@@ -173,7 +173,7 @@ def computeDiskMass(m1, m2, chi1, chi2, eosname='2H', kerr=False,
     kerr : bool
         Supply to use the relativistic tidal parameter. See Fishbone (1971).
     R_ns : float
-        Radius of the secondary, assuming it is a neutron star.
+        Radius of the secondary in m, assuming it is a neutron star.
     max_mass : float
         Maximum mass of a neutron star. To be supplied if not supplying EoS.
 

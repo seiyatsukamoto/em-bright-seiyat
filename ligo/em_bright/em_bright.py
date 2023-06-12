@@ -148,7 +148,8 @@ def get_redshifts(distances, N=10000):
 
 
 def source_classification_pe(posterior_samples_file, threshold=3.0,
-                             num_eos_draws=None, eos_seed=None):
+                             num_eos_draws=None, eos_seed=None,
+                             eosname='2H'):
     """
     Compute ``HasNS``, ``HasRemnant``, and ``HasMassGap`` probabilities
     from posterior samples.
@@ -167,6 +168,10 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
 
     eos_seed : int
         seed for random eos draws
+
+    eosname : str
+        Equation of state name, inferred from ``lalsimulation``. Superseded
+        by EoS marginalization method when ``num_eos_draws`` is provided.
 
     Returns
     -------
@@ -211,10 +216,12 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
         np.random.seed(eos_seed)
         prediction_nss, prediction_ems = [], []
         for m1, m2, a1, a2 in zip(mass_1, mass_2, a_1, a_2):
+            # EoS draws from: 10.5281/zenodo.6502467
             rand_subset = np.random.choice(
                 len(ALL_EOS_DRAWS), num_eos_draws if num_eos_draws < len(ALL_EOS_DRAWS) else len(ALL_EOS_DRAWS))  # noqa:E501
             subset_draws = ALL_EOS_DRAWS[rand_subset]
-            M, R = subset_draws['M'], subset_draws['R']
+            # convert radius to m from km
+            M, R = subset_draws['M'], 1000*subset_draws['R']
             max_masses = np.max(M, axis=1)
             f_M = [interp1d(m, r, bounds_error=False) for m, r in zip(M, R)]
             for mass_radius_relation, max_mass in zip(f_M, max_masses):
@@ -226,7 +233,8 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
         prediction_em = np.mean(prediction_ems)
 
     else:
-        M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2)
+        M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2,
+                                                eosname=eosname)
         prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
         prediction_em = np.sum(M_rem > 0)/len(M_rem)
 

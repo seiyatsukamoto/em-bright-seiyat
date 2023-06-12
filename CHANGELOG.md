@@ -2,7 +2,8 @@
 
 ## [1.1.4] - unreleased
 
-- no changes.
+- Fix bug where R_ns was using incorrect units (km instead of m) in the case of EOS marginalization.
+  This corrects the NSBH HasRemnant prediction using PE posterior with EOS marginalization.
 
 ## [1.1.3] - 2023-05-24
 

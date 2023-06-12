@@ -25,7 +25,7 @@ def test_version():
       [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
        ('a_2', '<f8'), ('tilt_1', '<f8'), ('tilt_2', '<f8'),
        ('luminosity_distance', '<f8')],
-      (1.0, 1.0, 0.5), (1.0, 0.5, 0.5)],
+      (1.0, 1.0, 0.5), (1.0, 1.0, 0.5)],
      [[(1.2, 1.0, 0.0, 0.0, 100.0),
        (2.0, 0.5, 0.99, 0.99, 150.0)],
       [('chirp_mass', '<f8'), ('mass_ratio', '<f8'), ('a_1', '<f8'),
@@ -72,7 +72,7 @@ def test_version():
      [('ra', '<f8'), ('dec', '<f8'), ('luminosity_distance', '<f8'),
       ('time', '<f8'), ('mass_1', '<f8'), ('mass_2', '<f8'),
       ('spin_1z', '<f8'), ('spin_2z', '<f8')],
-     (1.0, 1.0, 0.5), (1.0, 0.5, 0.5)]]
+     (1.0, 1.0, 0.5), (1.0, 1.0, 0.5)]]
 )
 def test_source_classification_pe(posteriors, dtype, result, result_eos):
     """Test em_bright classification from posterior
@@ -94,6 +94,58 @@ def test_source_classification_pe(posteriors, dtype, result, result_eos):
                                                    eos_seed=0)
     assert r == result
     assert r_eos == result_eos
+
+
+@pytest.mark.parametrize(
+    'posteriors, dtype, has_xxx_target',
+    [
+     [[(5.5, 1.5, 0.0, 0.0)],
+      [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
+      ('spin_1z', '<f8'), ('spin_2z', '<f8')],
+      (1.0, 0.0, 0.0)],
+     [[(5.5, 1.5, 0.5, 0.0)],
+      [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
+      ('spin_1z', '<f8'), ('spin_2z', '<f8')],
+      (1.0, 0.5, 0.0)],
+     [[(5.5, 1.5, 0.9, 0.0)],
+      [('mass_1_source', '<f8'), ('mass_2_source', '<f8'),
+      ('spin_1z', '<f8'), ('spin_2z', '<f8')],
+      (1.0, 1.0, 0.0)],
+    ]
+)
+def test_source_classification_pe_nsbh_eos(posteriors, dtype, has_xxx_target):
+    """
+    Test em_bright classification from posterior
+    samples for NSBH with EOS marginalization.
+
+    With fixed m1=5.5, m2=1.5, different spin1z
+    will give different Has_Remnant predictions.
+    A +- 0.15 tolerance is used to accomodate the
+    random nature of the EOS marginalization.
+
+    As a reference, the corresponding disk masses are:
+    >>> computeDiskMass(5.5, 1.5, 0.0, 0.0, eosname="SLY")
+    0.0
+    >>> computeDiskMass(5.5, 1.5, 0.5, 0.0, eosname="SLY")
+    0.008914595943631946
+    >>> computeDiskMass(5.5, 1.5, 0.9, 0.0, eosname="SLY")
+    0.2644515401548974
+    """
+    with NamedTemporaryFile() as f:
+        filename = f.name
+        with h5py.File(f, 'w') as tmp_h5:
+            data = np.array(
+                posteriors,
+                dtype=dtype
+            )
+            tmp_h5.create_dataset(
+                'posterior_samples',
+                data=data
+            )
+        has_xxx = em_bright.source_classification_pe(filename,
+                                                     num_eos_draws=100,
+                                                     eos_seed=1)
+    assert has_xxx == pytest.approx(has_xxx_target, abs=0.15)
 
 
 @pytest.mark.parametrize(
@@ -167,7 +219,7 @@ def test_compute_disk_mass_eos_marginalization(m1, m2, chi1, chi2,
     rand_subset = np.random.choice(
         len(ALL_EOS_DRAWS), num_eos_draws if num_eos_draws < len(ALL_EOS_DRAWS) else len(ALL_EOS_DRAWS))  # noqa:E501
     subset_draws = ALL_EOS_DRAWS[rand_subset]
-    M, R = subset_draws['M'], subset_draws['R']
+    M, R = subset_draws['M'], 1000*subset_draws['R']
     max_mass = np.max(M)
     mass_radius_relation = interp1d(M[0], R[0], bounds_error=False)
     has_remnant = em_bright.computeDiskMass.computeDiskMass(m1, m2, chi1, chi2, eosname=mass_radius_relation, max_mass=max_mass)  # noqa:E501
