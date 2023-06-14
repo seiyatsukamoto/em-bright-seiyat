@@ -1,4 +1,4 @@
-__version__ = '1.1.4dev'
+__version__ = '1.1.4'
 
 PACKAGE_DATA_BASE_URL = (
     'https://git.ligo.org/emfollow/em-properties/em-bright/'
