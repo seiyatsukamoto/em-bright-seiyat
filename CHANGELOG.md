@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5] - unreleased
+
+- No changes.
+
 ## [1.1.4.post1] - 2023-06-16
 
 - Pin download links that were missed in v1.1.4.

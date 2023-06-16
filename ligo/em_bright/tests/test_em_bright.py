@@ -15,7 +15,7 @@ from ..data import EOS_MAX_MASS
 
 def test_version():
     from .. import __version__
-    assert __version__ == '1.1.4.post1'
+    assert __version__ == '1.1.5dev'
 
 
 @pytest.mark.parametrize(
