@@ -147,12 +147,10 @@ def get_redshifts(distances, N=10000):
     return redshifts
 
 
-def source_classification_pe(posterior_samples_file, threshold=3.0,
-                             num_eos_draws=10000, eos_seed=None,
-                             eosname=None):
+def source_classification_pe(posterior_samples_file, **kwargs):
     """
     Compute ``HasNS``, ``HasRemnant``, and ``HasMassGap`` probabilities
-    from posterior samples.
+    from posterior samples file.
 
     Parameters
     ----------
@@ -187,35 +185,113 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
     """
     with h5py.File(posterior_samples_file, 'r') as data:
         samples = data['posterior_samples'][()]
+    return source_classification_pe_from_table(samples, **kwargs)
 
+
+def source_classification_pe_from_table(table, **kwargs):
+    """
+    Compute ``HasNS``, ``HasRemnant``, and ``HasMassGap`` probabilities
+    from posterior table
+
+    Parameters
+    ----------
+    table : numpy.recarray, dict
+        table containing the posterior samples
+
+    threshold : float, optional
+        Maximum neutron star mass for `HasNS` computation
+
+    num_eos_draws : int
+        providing an int here runs eos marginalization
+        with the value determining how many eos's to draw
+
+    eos_seed : int
+        seed for random eos draws
+
+    eosname : str
+        Equation of state name, inferred from ``lalsimulation``. Supersedes
+        eos marginalization method when provided.
+
+    Returns
+    -------
+    tuple
+        (HasNS, HasRemnant, HasMassGap) predicted values.
+    """
     try:
-        mass_1, mass_2 = samples['mass_1_source'], samples['mass_2_source']
-    except ValueError:
-        lum_dist = samples['luminosity_distance']
+        mass_1, mass_2 = table['mass_1_source'], table['mass_2_source']
+    except (ValueError, KeyError):
+        lum_dist = table['luminosity_distance']
         redshifts = get_redshifts(lum_dist)
         try:
-            mass_1, mass_2 = samples['mass_1'], samples['mass_2']
+            mass_1, mass_2 = table['mass_1'], table['mass_2']
             mass_1, mass_2 = mass_1/(1 + redshifts), mass_2/(1 + redshifts)
-        except ValueError:
-            chirp_mass, mass_ratio = samples['chirp_mass'], samples['mass_ratio']  # noqa:E501
+        except (ValueError, KeyError):
+            chirp_mass, mass_ratio = table['chirp_mass'], table['mass_ratio']  # noqa:E501
             chirp_mass = chirp_mass/(1 + redshifts)
             mass_1 = chirp_mass * (1 + mass_ratio)**(1/5) * (mass_ratio)**(-3/5)  # noqa:E501
             mass_2 = chirp_mass * (1 + mass_ratio)**(1/5) * (mass_ratio)**(2/5)
 
     try:
-        a_1 = samples["spin_1z"]
-        a_2 = samples["spin_2z"]
-    except ValueError:
+        a_1 = table["spin_1z"]
+        a_2 = table["spin_2z"]
+    except (ValueError, KeyError):
         try:
-            a_1 = samples['a_1'] * np.cos(samples['tilt_1'])
-            a_2 = samples['a_2'] * np.cos(samples['tilt_2'])
-        except ValueError:
+            a_1 = table['a_1'] * np.cos(table['tilt_1'])
+            a_2 = table['a_2'] * np.cos(table['tilt_2'])
+        except (ValueError, KeyError):
             a_1, a_2 = np.zeros(len(mass_1)), np.zeros(len(mass_2))
+    return source_classification_pe_from_samples(mass_1, mass_2, a_1, a_2,
+                                                 **kwargs)
 
+
+def source_classification_pe_from_samples(mass_1_source, mass_2_source,
+                                          spin_1z, spin_2z, threshold=3.0,
+                                          num_eos_draws=10000, eos_seed=None,
+                                          eosname=None):
+    """
+    Compute ``HasNS``, ``HasRemnant``, and ``HasMassGap`` probabilities
+    from samples.
+
+    Parameters
+    ----------
+    mass_1_source : np.ndarray
+        Samples for the source mass of the primary object
+
+    mass_2_source : np.ndarray
+        Samples for the source mass of the secondary object
+
+    spin_1z : np.ndarray
+        Samples for the spin component aligned with the orbital angular
+        momentum for the primary object
+
+    spin_2z : np.ndarray
+        Samples for the spin component aligned with the orbital angular
+        momentum for the secondary object
+
+    threshold : float, optional
+        Maximum neutron star mass for `HasNS` computation
+
+    num_eos_draws : int
+        providing an int here runs eos marginalization
+        with the value determining how many eos's to draw
+
+    eos_seed : int
+        seed for random eos draws
+
+    eosname : str
+        Equation of state name, inferred from ``lalsimulation``. Supersedes
+        eos marginalization method when provided.
+
+    Returns
+    -------
+    tuple
+        (HasNS, HasRemnant, HasMassGap) predicted values.
+    """
     if eosname:
-        M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2,
+        M_rem = computeDiskMass.computeDiskMass(mass_1_source, mass_2_source,
+                                                spin_1z, spin_2z,
                                                 eosname=eosname)
-        prediction_ns = np.sum(mass_2 <= threshold)/len(mass_2)
+        prediction_ns = np.sum(mass_2_source <= threshold)/len(mass_2_source)
         prediction_em = np.sum(M_rem > 0)/len(M_rem)
 
     else:
@@ -230,15 +306,15 @@ def source_classification_pe(posterior_samples_file, threshold=3.0,
         max_masses = np.max(M, axis=1)
         f_M = [interp1d(m, r, bounds_error=False) for m, r in zip(M, R)]
         for mass_radius_relation, max_mass in zip(f_M, max_masses):
-            M_rem = computeDiskMass.computeDiskMass(mass_1, mass_2, a_1, a_2, eosname=mass_radius_relation, max_mass=max_mass)  # noqa:E501
-            prediction_nss.append(np.mean(mass_2 <= max_mass))
+            M_rem = computeDiskMass.computeDiskMass(mass_1_source, mass_2_source, spin_1z, spin_2z, eosname=mass_radius_relation, max_mass=max_mass)  # noqa:E501
+            prediction_nss.append(np.mean(mass_2_source <= max_mass))
             prediction_ems.append(np.mean(M_rem > 0))
 
         prediction_ns = np.mean(prediction_nss)
         prediction_em = np.mean(prediction_ems)
 
-    prediction_mg = (mass_1 <= 5) & (mass_1 >= 3)
-    prediction_mg += (mass_2 <= 5) & (mass_2 >= 3)
-    prediction_mg = np.sum(prediction_mg)/len(mass_1)
+    prediction_mg = (mass_1_source <= 5) & (mass_1_source >= 3)
+    prediction_mg += (mass_2_source <= 5) & (mass_2_source >= 3)
+    prediction_mg = np.sum(prediction_mg)/len(mass_1_source)
 
     return prediction_ns, prediction_em, prediction_mg

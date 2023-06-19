@@ -2,7 +2,8 @@
 
 ## [1.1.5] - unreleased
 
-- No changes.
+- Split `source_classification_pe` into `source_classification_pe_from_table` and
+  `source_classification_pe_from_samples`.
 
 ## [1.1.4.post2] - 2023-06-16
 
