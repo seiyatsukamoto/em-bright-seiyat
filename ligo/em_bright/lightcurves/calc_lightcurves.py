@@ -14,6 +14,7 @@ import scipy.stats
 from configparser import ConfigParser
 from pathlib import Path
 from joblib import Parallel, delayed
+from astropy.table import Table
 
 from ligo.em_bright.computeDiskMass import computeCompactness
 import ligo.em_bright.lightcurves.lightcurve_utils as em_bright_utils
@@ -46,19 +47,28 @@ svd_path = 'data'
 model_path = Path(__file__).parents[1] / svd_path
 kwargs['ModelPath'] = model_path
 model = lightcurve_model['model']
-mag_model = model + '_mag.pkl'
-lbol_model = model + '_lbol.pkl'
-with open(model_path / mag_model, 'rb') as f:
-    svd_mag_model = pickle.load(f)
-with open(model_path / lbol_model, 'rb') as f:
-    svd_lbol_model = pickle.load(f)
+try:
+    mag_model = model + '_mag.pkl'
+    lbol_model = model + '_lbol.pkl'
+    with open(model_path / mag_model, 'rb') as f:
+        svd_mag_model = pickle.load(f)
+    with open(model_path / lbol_model, 'rb') as f:
+        svd_lbol_model = pickle.load(f)
+except FileNotFoundError:
+    mag_model = model + '_mag_tf.pkl'
+    lbol_model = model + '_lbol_tf.pkl'
+    with open(model_path / mag_model, 'rb') as f:
+        svd_mag_model = pickle.load(f)
+    with open(model_path / lbol_model, 'rb') as f:
+        svd_lbol_model = pickle.load(f)
 # time for meta data
 date_time = time.strftime('%Y%m%d-%H%M%S')
 
 # ADD TO CONFIG?
-N_cores = 10
-downsample = True
-#downsample = False
+#N_cores = 10
+N_cores = 1
+#downsample = True
+downsample = False
 
 def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
                            thetas=None, mass_dist=None, mass_draws=None,
@@ -130,6 +140,7 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
             kde = scipy.stats.gaussian_kde(farah_thetas)
             # len m1 may fail if m1 is passed as float
             thetas = kde.resample(size=len(m1s))[0]
+            print(thetas)
             #thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
     except ValueError: pass
 
@@ -152,11 +163,16 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
         #ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
         #ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
-    phis = 45 * np.ones(len(ejecta_samples))
+    #phis = 45 * np.ones(len(ejecta_samples))
+    phis = 30 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
+    print(ejecta_samples.keys())
 
     lightcurve_samples, lightcurve_metadata = None, None
-    if len(ejecta_samples)==1:
+    if len(ejecta_samples)==0:
+        print('No samples with significant mass ejecta!')
+        return lightcurve_samples, all_ejecta_samples, 0, all_eos_metadata, lightcurve_metadata
+    elif len(ejecta_samples)==1:
         lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
     elif N_cores > 1:
         print(f'running on {N_cores} cores')
@@ -172,10 +188,11 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     else:
         lightcurve_data = []
         print('running on one core')
-        for sample in ejecta_samples:
-            lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
-            lightcurve_data.append(lightcurves)
-        lightcurve_samples = astropy.table.vstack(lightcurve_data)
+        lightcurve_samples, lightcurve_metadata = ejecta_to_lightcurve(ejecta_samples)
+        #for sample in ejecta_samples:
+        #    lightcurves, lightcurve_metadata = ejecta_to_lightcurve(sample)
+        #    lightcurve_data.append(lightcurves)
+        #lightcurve_samples = astropy.table.vstack(lightcurve_data)
 
     sig_ejecta = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
     has_ejecta = len(sig_ejecta)/len(all_ejecta_samples['mej'])
@@ -275,6 +292,7 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
         meta data describing eos draws
     '''
 
+    print('applying EoS')
     mchirp, eta, q = lightcurve_utils.ms2mc(m1, m2)
     model, chi_eff = lightcurve_model['model'], lightcurve_model['chi_eff']
 
@@ -319,9 +337,9 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     NSBH_fit = NSBHEjectaFitting()
 
     # BH c1 = 4/9 lambda1 = 0
-    samples['c1'][idx2], samples['lambda1'][idx2] = 4/9, 0
-    samples['c1'][idx3], samples['lambda1'][idx3] = 4/9, 0
-    samples['c2'][idx3], samples['lambda2'][idx3] = 4/9, 0
+    #samples['c1'][idx2], samples['lambda1'][idx2] = 4/9, 0
+    #samples['c1'][idx3], samples['lambda1'][idx3] = 4/9, 0
+    #samples['c2'][idx3], samples['lambda2'][idx3] = 4/9, 0
 
     samples = em_bright_utils.lambdas_to_lambdatilde(samples)
     R16 = samples['mchirp'] * (samples['lambdatilde']/0.0042)**(1.0/6.0)
@@ -476,12 +494,23 @@ def eos_samples(samples, thetas, N_eos, eos_draws):
     if eosname == 'gp':
         eos_metadata['eos_draw_indices'] = indices
 
+        lightcurve_model = eval(config.get('lightcurve_configs',
+                                       'lightcurve_model'))
+        samples['tini'] = lightcurve_model['tini']
+        samples['tmax'] = lightcurve_model['tmax']
+        samples['dt'] = lightcurve_model['dt']
+
         # create a new table including each eos draw for each
         # component mass pair, and new quantities
         data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs,
                           thetas, mbnss, qs, mchirps, etas)).T
         samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff',
                                        'theta', 'mbns', 'q', 'mchirp', 'eta'))
+
+        data = np.vstack((m1s, m2s, lambda1s, lambda2s, chi_effs,
+                          thetas, mbnss, qs, mchirps, etas, lightcurve_model['tini']*np.ones(len(m1s)), lightcurve_model['tmax']*np.ones(len(m1s)), lightcurve_model['dt']*np.ones(len(m1s)))).T
+        samples = KNTable(data, names=('m1', 'm2', 'lambda1', 'lambda2', 'chi_eff',
+                                       'theta', 'mbns', 'q', 'mchirp', 'eta', 'tini', 'tmax', 'dt'))
 
     return samples, eos_metadata
 
@@ -504,16 +533,21 @@ def ejecta_to_lightcurve(samples):
         meta data describing lightcurve calculation
     '''
 
+    print(samples.keys())
+
     #num_samples = len(samples)
     #phis = 45 * np.ones(num_samples)
+    #phis = 30 * np.ones(num_samples)
     #samples['phi'] = phis
 
+    '''
     # intitial time, final time, and timestep for lightcurve calculation
     lightcurve_model = eval(config.get('lightcurve_configs',
                                        'lightcurve_model'))
     samples['tini'] = lightcurve_model['tini']
     samples['tmax'] = lightcurve_model['tmax']
     samples['dt'] = lightcurve_model['dt']
+    '''
 
     # read from config file
     kwargs['ModelPath'] = model_path
