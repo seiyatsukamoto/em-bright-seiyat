@@ -92,6 +92,20 @@ for name, url in PACKAGE_DATA_LINKS.items():
     )
 
 
+def _download_data_file(url):
+    """Download a single file.
+
+    This is an internal method designed to be called as part of a map()
+    operation only.
+    """
+    return download_file(
+        url,
+        cache=True,
+        show_progress=False,
+        pkgname="ligo.em_bright",
+    )
+
+
 def _download_data_files(
     urls,
     message=None,
