@@ -25,6 +25,7 @@ config.read(conf_path)
 ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
 eos_config = ejecta_model['eosname']
 
+
 #PE_path = '/home/andrew.toivonen/mdc-analytics/PE_samples/event_files_new'
 #PE_path = f'/home/andrew.toivonen/mdc-analytics/PE_updated/1350240000_1354278000/'
 PE_path = f'/home/andrew.toivonen/mdc-analytics/PE_updated/MDC9_PE/1353696000_1357152000/'
@@ -59,7 +60,7 @@ def run_lc(m1, m2, d, event):
         #path = f'./mdc_analysis/updated_fits/PE_MDC9_1000/{event}'
         #path = f'./mdc_analysis/updated_fits/PE_MDC9_200/{event}'
         #path = f'./mdc_analysis/PE_q_MDC9_1000/{event}'
-        path = f'./mdc_analysis/test/PE_MDC9_50/{event}'
+        path = f'./mdc_analysis/test_phi30/PE_MDC9_50/{event}'
         if os.path.isdir(path):
             print(f'{event} already exists')
             return

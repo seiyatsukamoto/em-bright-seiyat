@@ -56,9 +56,9 @@ def run_lc(m1, m2, theta, d, event):
         #path = f'./mdc_analysis/APR4_EPP_MDC9/{event}'
         #----------------------------------------------
         #path = f'./mdc_analysis/updated_fits/SLy_MDC9/{event}'
-        path = f'./mdc_analysis/updated_fits2/APR4_EPP_MDC9/{event}'
+        #path = f'./mdc_analysis/updated_fits2/APR4_EPP_MDC9/{event}'
         #path = f'./mdc_analysis/updated_fits2/SLy_MDC9/{event}'
-        path = f'./mdc_analysis/test/SLy_MDC9/{event}'
+        path = f'./mdc_analysis/test_phi30/SLy_MDC9/{event}'
         if not os.path.isdir(path):
             os.makedirs(path)
         filename = f'{path}/inj_lc_{N_downsample}_table_{event}_{eos_config}_{draws}x{N_eos}_{yields_ejecta}.pickle'

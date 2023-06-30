@@ -109,6 +109,8 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
         meta data describing lightcurve calculation
     '''
 
+    # allow floats, list, arrays of different shapes to be passed
+    m1s, m2s = np.array([m1s]).flatten(), np.array([m2s]).flatten()
     # function in utils??
     # shift masses to source frame if distances provided
     #shift_distances = True
@@ -140,7 +142,6 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
             kde = scipy.stats.gaussian_kde(farah_thetas)
             # len m1 may fail if m1 is passed as float
             thetas = kde.resample(size=len(m1s))[0]
-            print(thetas)
             #thetas = 180. * np.arccos(np.random.uniform(-1., 1., len(m1s))) / np.pi
     except ValueError: pass
 
@@ -156,7 +157,6 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     all_ejecta_samples = astropy.table.vstack(all_ejecta_data)
     all_eos_metadata = astropy.table.vstack(all_eos_metadata)
 
-    #ejecta_samples = all_ejecta_samples
     ejecta_samples = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
     if downsample:
         ejecta_samples = ejecta_samples.downsample(Nsamples=50)
@@ -166,7 +166,6 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
     #phis = 45 * np.ones(len(ejecta_samples))
     phis = 30 * np.ones(len(ejecta_samples))
     ejecta_samples['phi'] = phis
-    print(ejecta_samples.keys())
 
     lightcurve_samples, lightcurve_metadata = None, None
     if len(ejecta_samples)==0:
@@ -373,8 +372,6 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     samples['dyn_mej'] = dyn_mej
     samples['wind_mej'] = wind_mej
 
-    print(np.max(mej), np.mean(mej))
-
     # Add draw from a gaussian in the log of
     # ejecta mass with 1-sigma size of 70%
     err_dict = eval(config.get('lightcurve_configs', 'mej_error_dict'))
@@ -532,8 +529,6 @@ def ejecta_to_lightcurve(samples):
     lightcurve_metadata: astropy table object
         meta data describing lightcurve calculation
     '''
-
-    print(samples.keys())
 
     #num_samples = len(samples)
     #phis = 45 * np.ones(num_samples)
