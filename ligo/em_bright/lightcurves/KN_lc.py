@@ -90,4 +90,4 @@ if downsample:
 m1, m2 = PE_data['mass_1_source'].values, PE_data['mass_2_source'].values
 d = PE_data['luminosity_distance'].values
 
-run_lc(m1, m2, d)
+run_lc(m1, m2)

@@ -111,6 +111,8 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
 
     # allow floats, list, arrays of different shapes to be passed
     m1s, m2s = np.array([m1s]).flatten(), np.array([m2s]).flatten()
+    
+    ''' # moved elsewhere for now
     # function in utils??
     # shift masses to source frame if distances provided
     #shift_distances = True
@@ -125,6 +127,7 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
         z = distances.compute_z(Planck18)
         m1s = m1s/(1+z)
         m2s = m2s/(1+z)
+   '''
 
     # draw masses from dist
     if mass_dist:
