@@ -5,12 +5,17 @@ import pickle5 as pickle
 
 event = 'S230518h'
 
+
 #lc_filename = 'PE_lc_129_table_S230518h_gp_2000x50_0.001.pickle'
 #ej_filename = 'PE_ejecta_table_S230518h_gp_2000x50_0.001.pickle'
 lc_filename = 'PE_lc_553_table_S230518h_gp_10000x50_0.001.pickle'
 ej_filename = 'PE_ejecta_table_S230518h_gp_10000x50_0.001.pickle'
 lc_filename = 'PE_lc_48_table_S230518h_gp_1000x50_0.001.pickle'
 ej_filename = 'PE_ejecta_table_S230518h_gp_1000x50_0.001.pickle'
+
+lc_filename = 'PE_lc_Bu2019lm_6_table_gp_100x50_0.001.pickle'
+ej_filename = 'PE_ejecta_table_gp_100x50_0.001.pickle'
+
 
 filepath = f'/home/andrew.toivonen/em-bright-andrew/ligo/em_bright/lightcurves/O4/{event}'
 

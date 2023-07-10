@@ -70,7 +70,7 @@ N_cores = 1
 #downsample = True
 downsample = False
 
-def lightcurve_predictions(m1s=None, m2s=None, distances=None, 
+def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=None, 
                            thetas=None, mass_dist=None, mass_draws=None,
                            N_eos=N_eos, N_cores=N_cores):
     '''
@@ -81,11 +81,11 @@ def lightcurve_predictions(m1s=None, m2s=None, distances=None,
 
     Parameters
     ----------
-    m1s: numpy array
-        more massive component masses in solar masses
-    m2s: numpy array
-        less massive component masses in solar masses
-    distances: numpy array
+    mass_1_source: numpy array
+        more massive component source masses in solar masses
+    mass_2_source: numpy array
+        less massive component source masses in solar masses
+    distances: numpy array   # remove??
         luminosity distance, only provide if masses in 
         detector frame, units of Mpc
     thetas: numpy array
