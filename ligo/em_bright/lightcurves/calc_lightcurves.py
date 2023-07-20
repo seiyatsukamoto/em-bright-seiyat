@@ -36,10 +36,10 @@ if fix_seed == 'True':
 # load posterior
 draws = em_bright_utils.load_eos_posterior()
 # load ejecta configs
-ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
-N_eos = ejecta_model['N_eos']
-eosname = ejecta_model['eosname']
-zeta = ejecta_model['zeta']
+ejecta_config = eval(config.get('lightcurve_configs', 'ejecta_config'))
+#N_eos = ejecta_config['N_eos']
+eosname = ejecta_config['eosname']
+zeta = ejecta_config['zeta']
 # load lightcurve configs
 lightcurve_model = eval(config.get('lightcurve_configs', 'lightcurve_model'))
 kwargs = eval(config.get('lightcurve_configs', 'kwargs'))
@@ -70,9 +70,8 @@ N_cores = 1
 #downsample = True
 downsample = False
 
-def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=None, 
-                           thetas=None, mass_dist=None, mass_draws=None,
-                           N_eos=N_eos, N_cores=N_cores):
+def lightcurve_predictions(mass_1_source, mass_2_source, thetas=None,
+                           N_eos=ejecta_config['N_eos'], N_cores=N_cores):
     '''
     Main function to carry out ejecta quantity and lightcurve
     predictions. Needs either: m1 and m2 OR
@@ -85,15 +84,8 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
         more massive component source masses in solar masses
     mass_2_source: numpy array
         less massive component source masses in solar masses
-    distances: numpy array   # remove??
-        luminosity distance, only provide if masses in 
-        detector frame, units of Mpc
     thetas: numpy array
         inclination angles in radians
-    mass_dist: str
-        one of the mass dists found in mass_distributions
-    mass_draws: int
-        number of masses to draw if using mass_dist
     N_eos: int
         number of eos draws
 
@@ -110,30 +102,9 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
     '''
 
     # allow floats, list, arrays of different shapes to be passed
-    m1s, m2s = np.array([m1s]).flatten(), np.array([m2s]).flatten()
+    m1s, m2s = np.array([mass_1_source]).flatten(), np.array([mass_2_source]).flatten()
     
-    ''' # moved elsewhere for now
-    # function in utils??
-    # shift masses to source frame if distances provided
-    #shift_distances = True
-    try:
-        if np.array(distances) == None:
-            shift_distances = False
-        else: shift_distances = True
-    except ValueError: shift_distances = True
-    if shift_distances:
-        print('Shifting masses using passed distances')
-        distances = Distance(distances, u.Mpc)
-        z = distances.compute_z(Planck18)
-        m1s = m1s/(1+z)
-        m2s = m2s/(1+z)
-   '''
-
-    # draw masses from dist
-    if mass_dist:
-        m1s, m2s = initial_mass_draws(mass_dist, mass_draws)
-
-    # sort masses to make sure m1 > m2
+    # check to make sure m1 > m2
     m1s_sorted = np.maximum(m1s, m2s)
     m2s_sorted = np.minimum(m1s, m2s)
 
@@ -161,8 +132,8 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
     all_eos_metadata = astropy.table.vstack(all_eos_metadata)
 
     ejecta_samples = all_ejecta_samples[all_ejecta_samples['mej'] > 1e-3]
-    if downsample:
-        ejecta_samples = ejecta_samples.downsample(Nsamples=50)
+    if ejecta_config['downsample']:
+        ejecta_samples = ejecta_samples.downsample(Nsamples=ejecta_config['downsample'])
         #ejecta_samples = ejecta_samples.downsample(Nsamples=1000)
         #ejecta_samples = ejecta_samples.downsample(Nsamples=15)
 
@@ -201,72 +172,7 @@ def lightcurve_predictions(mass_1_source=None, mass_2_source=None, distances=Non
     return lightcurve_samples, all_ejecta_samples, has_ejecta, all_eos_metadata, lightcurve_metadata
 
 
-def find_percentiles(lightcurve_data):
-    '''
-    Function to find 5th, 50th, and 95th percentiles
-    for mass ejecta and magnitude bands
-
-    Parameters
-    ----------
-    lightcurve_data: KNTable object
-        ejecta quatities and lightcurves for various mag bands
-
-    Returns
-    -------
-    percentiles: dictionary
-        5th, 50th, 95th percentiles of mass ejecta and magnitude bands
-    '''
-    #mej = lightcurve_data['mej']
-    #mags = lightcurve_data['mag']
-    percentiles = {}
-    # 5th, 50th, 95th??
-    percentile_list = [5, 50, 95]
-    try:
-        mej = lightcurve_data['mej']
-        percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
-    except: pass
-    try:
-        mags = lightcurve_data['mag']
-        peak_mags = {}
-        bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
-        # find peak mag for each mag in each lightcurve
-        for i, band in enumerate(bands):
-            peaks = []
-            lightcurves = mags[:, i, :]
-            for lightcurve in lightcurves:
-                peaks.append(np.nanmin(lightcurve))
-            peak_mags[band] = peaks
-            percentiles[band] = np.nanpercentile(peaks, percentile_list)
-    except: pass
-    #percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
-    return percentiles
-
-
-def initial_mass_draws(dist, mass_draws):
-    '''
-    Draws component masses (NS's or BH's) from the desired distribution
-
-    Parameters
-    ----------
-    dist: str
-        one of the mass dists found in mass_distributions
-    mass_draws: int
-        number of component mass pairs to draw
-
-    Returns
-    -------
-    m1: numpy array
-        more massive component mass in solar masses
-    m2: numpy array
-        less massive component mass in solar masses
-    '''
-
-    m1, m2, merger_type = dist(mass_draws)
-
-    return m1, m2
-
-
-def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
+def run_eos(m1, m2, thetas, N_eos=ejecta_config['N_eos'], eos_draws=None):
     '''
     Uses eos draws provided and calculates ejecta quantities, including
     total mass ejecta, dyn and wind ejecta, velocity of ejecta,
@@ -378,7 +284,7 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     # Add draw from a gaussian in the log of
     # ejecta mass with 1-sigma size of 70%
     err_dict = eval(config.get('lightcurve_configs', 'mej_error_dict'))
-    error = ejecta_model['mej_error']
+    error = ejecta_config['mej_error']
     if error == 'log':
         samples['mej'] = np.power(10., np.random.normal(np.log10(samples['mej']), err_dict['log_val']))  # noqa:E501
     elif error == 'lin':
@@ -389,7 +295,7 @@ def run_eos(m1, m2, thetas, N_eos=N_eos, eos_draws=None):
     if np.min(samples['mej']) < 0:
         print('---------------mej less than zero!!!-----------------')
     idx = np.where(samples['mej'] <= 0)[0]
-    samples['mej'][idx] = ejecta_model['min_mej']
+    samples['mej'][idx] = ejecta_config['min_mej']
 
     if (model == 'Bu2019inc'):
         idx = np.where(samples['mej'] <= 1e-6)[0]
@@ -488,7 +394,7 @@ def eos_samples(samples, thetas, N_eos, eos_draws):
                 etas.append(row['eta'])
 
     eos_metadata['m1s'], eos_metadata['m2s'] = m1s, m2s
-    eos_metadata['mej_err'] = ejecta_model['mej_error']
+    eos_metadata['mej_err'] = ejecta_config['mej_error']
     eos_metadata['N_eos'] = N_eos
 
     if eosname == 'gp':
@@ -558,3 +464,42 @@ def ejecta_to_lightcurve(samples):
 
     return lightcurve_data, lightcurve_metadata
 
+def find_percentiles(lightcurve_data):
+    '''
+    Function to find 5th, 50th, and 95th percentiles
+    for mass ejecta and magnitude bands
+
+    Parameters
+    ----------
+    lightcurve_data: KNTable object
+        ejecta quatities and lightcurves for various mag bands
+
+    Returns
+    -------
+    percentiles: dictionary
+        5th, 50th, 95th percentiles of mass ejecta and magnitude bands
+    '''
+    #mej = lightcurve_data['mej']
+    #mags = lightcurve_data['mag']
+    percentiles = {}
+    # 5th, 50th, 95th??
+    percentile_list = [5, 50, 95]
+    try:
+        mej = lightcurve_data['mej']
+        percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    except: pass
+    try:
+        mags = lightcurve_data['mag']
+        peak_mags = {}
+        bands = ['u', 'g', 'r', 'i', 'z', 'y', 'J', 'H', 'K']
+        # find peak mag for each mag in each lightcurve
+        for i, band in enumerate(bands):
+            peaks = []
+            lightcurves = mags[:, i, :]
+            for lightcurve in lightcurves:
+                peaks.append(np.nanmin(lightcurve))
+            peak_mags[band] = peaks
+            percentiles[band] = np.nanpercentile(peaks, percentile_list)
+    except: pass
+    #percentiles['mej'] = np.nanpercentile(np.array(mej), percentile_list)
+    return percentiles
