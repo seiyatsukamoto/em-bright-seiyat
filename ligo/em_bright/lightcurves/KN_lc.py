@@ -28,8 +28,8 @@ config = ConfigParser()
 config.read(conf_path)
 
 # load ejecta configs
-ejecta_model = eval(config.get('lightcurve_configs', 'ejecta_model'))
-eos_config = ejecta_model['eosname']
+ejecta_config = eval(config.get('lightcurve_configs', 'ejecta_config'))
+eos_config = ejecta_config['eosname']
 
 PE_path = f'./O4/{event}/PE'
 #dirs = os.listdir(PE_path)
@@ -40,9 +40,9 @@ N_eos = 50
 #N_cores = 3
 N_cores = 1
 
-def run_lc(mass_1, mass_2, luminosity_distance):
+def run_lc(mass_1, mass_2):
         path = f'./O4/{event}'
-        lc_data, ejecta_data, yields_ejecta, eos_metadata, lightcurve_metadata = lightcurve_predictions(m1s = mass_1, m2s = mass_2, distances=luminosity_distance, N_eos=N_eos, N_cores=N_cores)
+        lc_data, ejecta_data, yields_ejecta, eos_metadata, lightcurve_metadata = lightcurve_predictions(mass_1_source = mass_1, mass_2_source = mass_2, N_eos=N_eos, N_cores=N_cores)
         draws = int(len(ejecta_data)/N_eos)
         path = f'./O4/{event}'
         if not os.path.isdir(path):
@@ -80,14 +80,15 @@ def downsample_PE(PE_data, N_downsample=100):
     rand_idx = np.random.choice(len(PE_data), size = N_downsample)
     return PE_data.loc[rand_idx]
 
-PE_path = f'./O4/{event}/PE/Bilby.posterior_samples.hdf5'
-PE_data = load_bilby_PE(PE_path)
-print(PE_data.keys())
-downsample = True
-if downsample:
-    PE_data = downsample_PE(PE_data)
+if __name__ == '__main__':
+    PE_path = f'./O4/{event}/PE/Bilby.posterior_samples.hdf5'
+    PE_data = load_bilby_PE(PE_path)
+    print(PE_data.keys())
+    downsample = True
+    if downsample:
+        PE_data = downsample_PE(PE_data)
 
-m1, m2 = PE_data['mass_1_source'].values, PE_data['mass_2_source'].values
-d = PE_data['luminosity_distance'].values
+    m1, m2 = PE_data['mass_1_source'].values, PE_data['mass_2_source'].values
+    d = PE_data['luminosity_distance'].values
 
-run_lc(m1, m2)
+    run_lc(m1, m2)

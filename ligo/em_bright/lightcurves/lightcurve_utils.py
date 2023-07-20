@@ -287,3 +287,27 @@ class BNSEjectaFitting(object):
         mdyn = np.maximum(0.0, mdyn)
 
         return mdyn
+
+
+def initial_mass_draws(dist, mass_draws):
+    '''
+    Draws component masses (NS's or BH's) from the desired distribution
+
+    Parameters
+    ----------
+    dist: str
+        one of the mass dists found in mass_distributions
+    mass_draws: int
+        number of component mass pairs to draw
+
+    Returns
+    -------
+    m1: numpy array
+        more massive component mass in solar masses
+    m2: numpy array
+        less massive component mass in solar masses
+    '''
+
+    m1, m2, merger_type = dist(mass_draws)
+
+    return m1, m2
